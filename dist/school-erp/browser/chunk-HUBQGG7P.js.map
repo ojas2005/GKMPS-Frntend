@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/app/features/transport/transport.routes.ts"],
-  "sourcesContent": ["import { Routes } from '@angular/router';\n\nexport const TRANSPORT_ROUTES: Routes = [\n  {\n    path: '',\n    loadComponent: () => import('./pages/transport/transport.component').then(m => m.TransportComponent),\n  },\n];\n"],
-  "mappings": ";;;AAEO,IAAM,mBAA2B;EACtC;IACE,MAAM;IACN,eAAe,MAAM,OAAO,qBAAuC,EAAE,KAAK,OAAK,EAAE,kBAAkB;;;",
-  "names": []
-}

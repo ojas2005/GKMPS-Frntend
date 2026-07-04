@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/app/features/my-portal/my-portal.routes.ts"],
-  "sourcesContent": ["import { Routes } from '@angular/router';\n\nexport const MY_PORTAL_ROUTES: Routes = [\n  {\n    path: '',\n    loadComponent: () => import('./pages/my-portal/my-portal.component').then(m => m.MyPortalComponent),\n  },\n];\n"],
-  "mappings": ";;;AAEO,IAAM,mBAA2B;EACtC;IACE,MAAM;IACN,eAAe,MAAM,OAAO,qBAAuC,EAAE,KAAK,OAAK,EAAE,iBAAiB;;;",
-  "names": []
-}

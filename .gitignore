@@ -13,3 +13,8 @@ __v0_jsx-dev-runtime.ts
 node_modules
 .next/
 .DS_Store
+
+# Build output -- produced fresh by `npm run build` (and by CI in
+# .github/workflows/frontend-ci.yml), never committed.
+dist/
+.angular/

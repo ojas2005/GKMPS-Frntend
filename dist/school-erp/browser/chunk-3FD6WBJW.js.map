@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/app/features/library/library.routes.ts"],
-  "sourcesContent": ["import { Routes } from '@angular/router';\n\nexport const LIBRARY_ROUTES: Routes = [\n  {\n    path: '',\n    loadComponent: () => import('./pages/library/library.component').then(m => m.LibraryComponent),\n  },\n];\n"],
-  "mappings": ";;;AAEO,IAAM,iBAAyB;EACpC;IACE,MAAM;IACN,eAAe,MAAM,OAAO,qBAAmC,EAAE,KAAK,OAAK,EAAE,gBAAgB;;;",
-  "names": []
-}

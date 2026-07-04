@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/app/features/communication/communication.routes.ts"],
-  "sourcesContent": ["import { Routes } from '@angular/router';\n\nexport const COMMUNICATION_ROUTES: Routes = [\n  {\n    path: '',\n    loadComponent: () => import('./pages/communication/communication.component').then(m => m.CommunicationComponent),\n  },\n];\n"],
-  "mappings": ";;;AAEO,IAAM,uBAA+B;EAC1C;IACE,MAAM;IACN,eAAe,MAAM,OAAO,qBAA+C,EAAE,KAAK,OAAK,EAAE,sBAAsB;;;",
-  "names": []
-}

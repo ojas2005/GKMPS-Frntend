@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/app/features/students/students.routes.ts"],
-  "sourcesContent": ["import { Routes } from '@angular/router';\n\nexport const STUDENTS_ROUTES: Routes = [\n  {\n    path: '',\n    loadComponent: () => import('./pages/students/students.component').then(m => m.StudentsComponent),\n  },\n  {\n    path: ':id',\n    loadComponent: () => import('./pages/student-detail/student-detail.component').then(m => m.StudentDetailComponent),\n  },\n];\n"],
-  "mappings": ";;;AAEO,IAAM,kBAA0B;EACrC;IACE,MAAM;IACN,eAAe,MAAM,OAAO,qBAAqC,EAAE,KAAK,OAAK,EAAE,iBAAiB;;EAElG;IACE,MAAM;IACN,eAAe,MAAM,OAAO,qBAAiD,EAAE,KAAK,OAAK,EAAE,sBAAsB;;;",
-  "names": []
-}

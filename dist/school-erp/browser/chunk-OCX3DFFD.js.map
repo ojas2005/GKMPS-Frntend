@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/app/features/reports/reports.service.ts"],
-  "sourcesContent": ["import { Injectable, inject } from '@angular/core';\nimport { Observable } from 'rxjs';\nimport { ApiService } from '../../core/http/api.service';\n\nexport interface EnrollmentReport {\n  totalStudents?: number;\n  byClass?: Array<{ classId: string; className?: string; count: number }>;\n  [key: string]: unknown;\n}\n\nexport interface FeeCollectionReport {\n  total?: number;\n  byDay?: Array<{ date: string; amount: number }>;\n  [key: string]: unknown;\n}\n\n@Injectable({ providedIn: 'root' })\nexport class ReportsService {\n  private api = inject(ApiService);\n\n  enrollment(): Observable<EnrollmentReport> {\n    return this.api.get('/api/reports/enrollment');\n  }\n\n  enrollmentPdf(): Observable<Blob> {\n    return this.api.getBlob('/api/reports/enrollment/pdf');\n  }\n\n  feeCollection(fromUtc: string, toUtc: string): Observable<FeeCollectionReport> {\n    return this.api.get('/api/reports/fee-collection', { fromUtc, toUtc });\n  }\n}\n"],
-  "mappings": ";;;;;;;;;;;AAiBM,IAAO,kBAAP,MAAO,gBAAc;EAD3B,cAAA;AAEU,SAAA,MAAM,OAAO,UAAU;;EAE/B,aAAU;AACR,WAAO,KAAK,IAAI,IAAI,yBAAyB;EAC/C;EAEA,gBAAa;AACX,WAAO,KAAK,IAAI,QAAQ,6BAA6B;EACvD;EAEA,cAAc,SAAiB,OAAa;AAC1C,WAAO,KAAK,IAAI,IAAI,+BAA+B,EAAE,SAAS,MAAK,CAAE;EACvE;;;mCAbW,iBAAc;AAAA;mFAAd,iBAAc,SAAd,gBAAc,WAAA,YADD,OAAM,CAAA;AAC1B,IAAO,iBAAP;;sEAAO,gBAAc,CAAA;UAD1B;WAAW,EAAE,YAAY,OAAM,CAAE;;;",
-  "names": []
-}

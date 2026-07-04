@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/app/features/teachers/teachers.routes.ts"],
-  "sourcesContent": ["import { Routes } from '@angular/router';\n\nexport const TEACHERS_ROUTES: Routes = [\n  {\n    path: '',\n    loadComponent: () => import('./pages/teachers/teachers.component').then(m => m.TeachersComponent),\n  },\n  {\n    path: ':id',\n    loadComponent: () => import('./pages/teacher-detail/teacher-detail.component').then(m => m.TeacherDetailComponent),\n  },\n];\n"],
-  "mappings": ";;;AAEO,IAAM,kBAA0B;EACrC;IACE,MAAM;IACN,eAAe,MAAM,OAAO,qBAAqC,EAAE,KAAK,OAAK,EAAE,iBAAiB;;EAElG;IACE,MAAM;IACN,eAAe,MAAM,OAAO,qBAAiD,EAAE,KAAK,OAAK,EAAE,sBAAsB;;;",
-  "names": []
-}
