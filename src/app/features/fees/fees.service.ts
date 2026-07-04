@@ -46,7 +46,7 @@ export interface PaymentTransactionSummary {
 }
 
 export interface CollectionTotals {
-  total: number;
+  totalCollected: number;
   count?: number;
   [key: string]: unknown;
 }

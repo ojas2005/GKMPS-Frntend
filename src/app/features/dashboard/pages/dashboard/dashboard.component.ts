@@ -147,18 +147,18 @@ import { RouterLink } from '@angular/router';
         <div *ngIf="isStaff()" class="bg-white rounded-xl p-6 shadow-sm border border-neutral-200">
           <h2 class="text-lg font-semibold text-neutral-900 mb-4">Quick Actions</h2>
           <div class="space-y-3">
-            <button class="w-full px-4 py-3 rounded-lg border border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100 font-medium text-sm transition-colors text-left">
+            <a routerLink="/attendance" class="block w-full px-4 py-3 rounded-lg border border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100 font-medium text-sm transition-colors text-left">
               Mark Attendance
-            </button>
-            <button class="w-full px-4 py-3 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 font-medium text-sm transition-colors text-left">
+            </a>
+            <a routerLink="/communication" class="block w-full px-4 py-3 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 font-medium text-sm transition-colors text-left">
               Create Announcement
-            </button>
-            <button class="w-full px-4 py-3 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 font-medium text-sm transition-colors text-left">
+            </a>
+            <a routerLink="/students" class="block w-full px-4 py-3 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 font-medium text-sm transition-colors text-left">
               Add Student
-            </button>
-            <button class="w-full px-4 py-3 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 font-medium text-sm transition-colors text-left">
+            </a>
+            <a routerLink="/reports" class="block w-full px-4 py-3 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 font-medium text-sm transition-colors text-left">
               View Reports
-            </button>
+            </a>
           </div>
         </div>
       </div>
@@ -434,7 +434,7 @@ export class DashboardComponent implements OnInit {
     const to = new Date().toISOString();
     this.fees.collectionTotals(from, to).subscribe({
       next: (t) => {
-        const v = t?.total ?? null;
+        const v = t?.totalCollected ?? null;
         this.feeCollected.set(v);
         if (v !== null) this.countUp(v, this.feeShown);
       },

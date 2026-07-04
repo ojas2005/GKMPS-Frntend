@@ -366,7 +366,7 @@ export class FeesComponent implements OnInit {
 
   loadTotals(): void {
     this.service.collectionTotals(this.fromDate + 'T00:00:00Z', this.toDate + 'T23:59:59Z').subscribe({
-      next: (t) => this.total.set(t?.total ?? 0),
+      next: (t) => this.total.set(t?.totalCollected ?? 0),
       error: () => this.total.set(null),
     });
   }
