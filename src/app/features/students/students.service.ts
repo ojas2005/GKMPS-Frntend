@@ -8,6 +8,7 @@ import { CURRENT_ACADEMIC_YEAR } from '../../core/constants/classes';
 
 export interface Student {
   id: string;
+  linkedUserId?: string;
   admissionNumber?: string;
   fullName: string;
   classId?: string;

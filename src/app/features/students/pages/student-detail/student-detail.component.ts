@@ -7,6 +7,7 @@ import { AttendanceService } from '../../../attendance/attendance.service';
 import { FeesService, FeePayment, PaymentTransactionSummary } from '../../../fees/fees.service';
 import { ExaminationService, StudentResult } from '../../../examination/examination.service';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { UsersService } from '../../../../core/services/users.service';
 import { classNameById, sectionNameById } from '../../../../core/constants/classes';
 
 /**
@@ -50,6 +51,28 @@ import { classNameById, sectionNameById } from '../../../../core/constants/class
             <div><span class="text-neutral-500 block text-xs">Guardian</span>{{ s['parentName'] || s.guardianName || '—' }}</div>
             <div><span class="text-neutral-500 block text-xs">Guardian phone</span>{{ s['parentPhone'] || s.guardianPhone || '—' }}</div>
           </div>
+
+          <!-- Account / password (Admin/Principal/SuperAdmin only) -->
+          <div *ngIf="canManageAccount()" class="mt-4 pt-4 border-t border-neutral-200">
+            <button *ngIf="!showPasswordForm()" (click)="showPasswordForm.set(true)" type="button"
+              class="text-primary-600 hover:text-primary-700 text-sm font-medium">Reset login password</button>
+            <div *ngIf="showPasswordForm()">
+              <h3 class="text-sm font-semibold text-neutral-900 mb-1">Reset login password</h3>
+              <p class="text-xs text-neutral-500 mb-3">Passwords are stored hashed and cannot be viewed — set a new one and hand it to the student. This signs them out everywhere.</p>
+              <div class="flex flex-wrap items-end gap-3">
+                <div>
+                  <label class="block text-xs text-neutral-500 mb-1">New password (min 8 chars) *</label>
+                  <input [(ngModel)]="newPassword" type="text" placeholder="e.g. Student@456" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                </div>
+                <button (click)="resetPassword(s)" [disabled]="settingPassword()"
+                  class="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">
+                  {{ settingPassword() ? 'Saving...' : 'Set password' }}
+                </button>
+                <button (click)="showPasswordForm.set(false); newPassword = ''; passwordMsg.set('')" type="button" class="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Cancel</button>
+                <span *ngIf="passwordMsg()" class="text-sm" [class]="passwordOk() ? 'text-success-600' : 'text-error-600'">{{ passwordMsg() }}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -78,36 +101,68 @@ import { classNameById, sectionNameById } from '../../../../core/constants/class
               </tbody>
             </table>
 
-            <!-- Submit a fee payment (Admin/Principal/SuperAdmin/Accountant only) -->
+            <!-- One payment form. The "What is this payment for?" selector is the whole
+                 point: choosing an outstanding due routes to pay() and REDUCES its pending;
+                 "Other / new charge" routes to submitPayment() and logs a fresh fee. It
+                 defaults to the outstanding due, so the common case moves pending as
+                 expected -- no separate "log a fee" path to reach for by mistake. -->
             <div *ngIf="canSubmitFees()" class="mt-5 pt-4 border-t border-neutral-200">
-              <h3 class="text-sm font-semibold text-neutral-900 mb-1">Submit fee payment</h3>
-              <p class="text-xs text-neutral-500 mb-3">Records the amount as fully paid for the period given and produces a receipt immediately.</p>
+              <h3 class="text-sm font-semibold text-neutral-900 mb-3">Record a payment</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="md:col-span-2">
+                  <label class="block text-xs text-neutral-500 mb-1">What is this payment for? *</label>
+                  <select [(ngModel)]="payForm.target" (ngModelChange)="onTargetChange()" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+                    <option *ngFor="let d of outstandingDues()" [ngValue]="d.id">
+                      {{ d['feeStructureName'] || d['description'] || 'Fee' }} — ₹{{ pending(d) }} pending
+                    </option>
+                    <option [ngValue]="'new'">Other / a new charge not listed above</option>
+                  </select>
+                </div>
+
                 <div>
                   <label class="block text-xs text-neutral-500 mb-1">Amount (₹) *</label>
-                  <input [(ngModel)]="submitForm.amount" type="number" min="0.01" placeholder="5000" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
-                </div>
-                <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Fee duration *</label>
-                  <input [(ngModel)]="submitForm.periodLabel" placeholder="e.g. May 2026 - Jun 2026" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
-                </div>
-                <div class="md:col-span-2">
-                  <label class="block text-xs text-neutral-500 mb-1">Description</label>
-                  <input [(ngModel)]="submitForm.description" placeholder="e.g. Tuition fee, cash" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <input [(ngModel)]="payForm.amount" type="number" min="0.01" [max]="selectedDuePending()" placeholder="5000" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <p *ngIf="payForm.target !== 'new' && selectedDuePending() !== null" class="text-xs text-neutral-400 mt-1">Up to ₹{{ selectedDuePending() }} outstanding on this fee.</p>
                 </div>
                 <div>
                   <label class="block text-xs text-neutral-500 mb-1">Payment method</label>
-                  <select [(ngModel)]="submitForm.paymentMethod" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+                  <select [(ngModel)]="payForm.paymentMethod" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
                     <option>Cash</option><option>Card</option><option>UPI</option><option>BankTransfer</option>
                   </select>
                 </div>
+
+                <!-- A new charge needs its own description + period; paying an existing due does not. -->
+                <ng-container *ngIf="payForm.target === 'new'">
+                  <div class="md:col-span-2">
+                    <label class="block text-xs text-neutral-500 mb-1">Description *</label>
+                    <input [(ngModel)]="payForm.description" placeholder="e.g. Tuition fee, exam fee" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  </div>
+                  <div class="md:col-span-2">
+                    <label class="block text-xs text-neutral-500 mb-1">Fee duration *</label>
+                    <div class="flex items-center gap-1.5">
+                      <select [(ngModel)]="payForm.startMonth" class="px-2 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+                        <option *ngFor="let m of months" [ngValue]="m.value">{{ m.label }}</option>
+                      </select>
+                      <select [(ngModel)]="payForm.startYear" class="px-2 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+                        <option *ngFor="let y of years" [ngValue]="y">{{ y }}</option>
+                      </select>
+                      <span class="text-neutral-400 text-xs">to</span>
+                      <select [(ngModel)]="payForm.endMonth" class="px-2 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+                        <option *ngFor="let m of months" [ngValue]="m.value">{{ m.label }}</option>
+                      </select>
+                      <select [(ngModel)]="payForm.endYear" class="px-2 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+                        <option *ngFor="let y of years" [ngValue]="y">{{ y }}</option>
+                      </select>
+                    </div>
+                  </div>
+                </ng-container>
               </div>
               <div class="mt-3 flex items-center gap-3">
-                <button (click)="submitFee()" [disabled]="submittingFee()"
+                <button (click)="recordPayment()" [disabled]="paying()"
                   class="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">
-                  {{ submittingFee() ? 'Submitting...' : 'Submit payment' }}
+                  {{ paying() ? 'Saving...' : 'Record payment' }}
                 </button>
-                <span *ngIf="submitFeeMsg()" class="text-sm" [class]="submitFeeOk() ? 'text-success-600' : 'text-error-600'">{{ submitFeeMsg() }}</span>
+                <span *ngIf="payMsg()" class="text-sm" [class]="payOk() ? 'text-success-600' : 'text-error-600'">{{ payMsg() }}</span>
               </div>
             </div>
 
@@ -172,6 +227,7 @@ export class StudentDetailComponent implements OnInit {
   private feesService = inject(FeesService);
   private examsService = inject(ExaminationService);
   private auth = inject(AuthService);
+  private usersService = inject(UsersService);
 
   student = signal<Student | null>(null);
   loading = signal(false);
@@ -185,12 +241,36 @@ export class StudentDetailComponent implements OnInit {
   resultsError = signal('');
 
   transactions = signal<PaymentTransactionSummary[]>([]);
-  submitForm = { amount: 0, periodLabel: '', description: '', paymentMethod: 'Cash' };
-  submittingFee = signal(false);
-  submitFeeMsg = signal('');
-  submitFeeOk = signal(false);
+  months = [
+    { value: 1, label: 'Jan' }, { value: 2, label: 'Feb' }, { value: 3, label: 'Mar' },
+    { value: 4, label: 'Apr' }, { value: 5, label: 'May' }, { value: 6, label: 'Jun' },
+    { value: 7, label: 'Jul' }, { value: 8, label: 'Aug' }, { value: 9, label: 'Sep' },
+    { value: 10, label: 'Oct' }, { value: 11, label: 'Nov' }, { value: 12, label: 'Dec' },
+  ];
+  years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 1 + i);
+
+  // One form for every payment. `target` is either a FeePayment.id (pay down that due) or
+  // 'new' (log a brand-new charge). Defaults to the outstanding due in syncPaymentTarget().
+  payForm = {
+    target: '' as string,
+    amount: 0,
+    description: '',
+    startMonth: new Date().getMonth() + 1, startYear: new Date().getFullYear(),
+    endMonth: new Date().getMonth() + 1, endYear: new Date().getFullYear(),
+    paymentMethod: 'Cash',
+  };
+  paying = signal(false);
+  payMsg = signal('');
+  payOk = signal(false);
 
   canSubmitFees = (): boolean => this.auth.hasRole('SuperAdmin', 'Principal', 'Admin', 'Accountant');
+  canManageAccount = (): boolean => this.auth.hasRole('SuperAdmin', 'Principal', 'Admin');
+
+  showPasswordForm = signal(false);
+  newPassword = '';
+  settingPassword = signal(false);
+  passwordMsg = signal('');
+  passwordOk = signal(false);
 
   className = classNameById;
   sectionName = sectionNameById;
@@ -201,6 +281,9 @@ export class StudentDetailComponent implements OnInit {
   pending = (f: FeePayment): number =>
     Math.max(0, this.total(f) - this.paid(f) - Number(f['waiverAmount'] ?? 0));
   pendingTotal = (): number => this.fees().reduce((sum, f) => sum + this.pending(f), 0);
+  outstandingDues = (): FeePayment[] => this.fees().filter((f) => this.pending(f) > 0);
+  selectedDue = (): FeePayment | null => this.fees().find((f) => f.id === this.payForm.target) ?? null;
+  selectedDuePending = (): number | null => { const d = this.selectedDue(); return d ? this.pending(d) : null; };
   pctClass = (): string => {
     const p = this.attendancePct();
     return p === null ? 'text-neutral-400' : p >= 75 ? 'text-success-600' : 'text-error-600';
@@ -232,7 +315,7 @@ export class StudentDetailComponent implements OnInit {
       error: (err) => this.attError.set(this.msg(err, 'Failed to load attendance.')),
     });
     this.feesService.myPayments(id).subscribe({
-      next: (list) => this.fees.set(list ?? []),
+      next: (list) => { this.fees.set(list ?? []); this.syncPaymentTarget(); },
       error: (err) => this.feesError.set(this.msg(err, 'Failed to load fees.')),
     });
     this.examsService.studentResults(id).subscribe({
@@ -249,29 +332,109 @@ export class StudentDetailComponent implements OnInit {
     });
   }
 
-  submitFee(): void {
+  private monthLabel(month: number, year: number): string {
+    return new Date(year, month - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  }
+
+  private periodLabel(): string {
+    const start = this.monthLabel(this.payForm.startMonth, this.payForm.startYear);
+    if (this.payForm.startMonth === this.payForm.endMonth && this.payForm.startYear === this.payForm.endYear) {
+      return start;
+    }
+    return `${start} - ${this.monthLabel(this.payForm.endMonth, this.payForm.endYear)}`;
+  }
+
+  // Point the form at the first outstanding due (or "new" if everything is settled) and
+  // prefill the amount. Called on load and after every payment so the default is always
+  // "pay down what's owed".
+  private syncPaymentTarget(): void {
+    const dues = this.outstandingDues();
+    this.payForm.target = dues.length > 0 ? dues[0].id : 'new';
+    this.onTargetChange();
+  }
+
+  // Selecting a due prefills its full pending amount; "new" clears it for manual entry.
+  onTargetChange(): void {
+    const d = this.selectedDue();
+    this.payForm.amount = d ? this.pending(d) : 0;
+    this.payMsg.set('');
+  }
+
+  recordPayment(): void {
     const s = this.student();
-    if (!s?.classId) { this.submitFeeOk.set(false); this.submitFeeMsg.set('Student has no class on record.'); return; }
-    if (!this.submitForm.amount || this.submitForm.amount <= 0 || !this.submitForm.periodLabel.trim()) {
-      this.submitFeeOk.set(false); this.submitFeeMsg.set('Amount and fee duration are required.');
+    if (!s?.classId) { this.payOk.set(false); this.payMsg.set('Student has no class on record.'); return; }
+    if (!this.payForm.amount || this.payForm.amount <= 0) {
+      this.payOk.set(false); this.payMsg.set('Enter a positive amount.');
       return;
     }
-    this.submittingFee.set(true); this.submitFeeMsg.set('');
-    this.feesService.submitPayment(this.id, {
-      classId: s.classId,
-      amount: this.submitForm.amount,
-      periodLabel: this.submitForm.periodLabel.trim(),
-      description: this.submitForm.description.trim() || undefined,
-      paymentMethod: this.submitForm.paymentMethod,
+
+    if (this.payForm.target === 'new') {
+      if (!this.payForm.description.trim()) {
+        this.payOk.set(false); this.payMsg.set('Add a description for the new charge.');
+        return;
+      }
+      this.paying.set(true); this.payMsg.set('');
+      this.feesService.submitPayment(this.id, {
+        classId: s.classId,
+        amount: this.payForm.amount,
+        periodLabel: this.periodLabel(),
+        description: this.payForm.description.trim(),
+        paymentMethod: this.payForm.paymentMethod,
+      }).subscribe({
+        next: () => this.afterPayment('New charge recorded and receipt generated.'),
+        error: (err) => this.paymentError(err),
+      });
+      return;
+    }
+
+    const due = this.selectedDue();
+    if (!due) { this.payOk.set(false); this.payMsg.set('Choose what this payment is for.'); return; }
+    const maxPending = this.pending(due);
+    if (this.payForm.amount > maxPending) {
+      this.payOk.set(false); this.payMsg.set(`That's more than the ₹${maxPending} outstanding on this fee.`);
+      return;
+    }
+    this.paying.set(true); this.payMsg.set('');
+    this.feesService.pay({
+      studentId: this.id,
+      feePaymentId: due.id,
+      amount: this.payForm.amount,
+      paymentMethod: this.payForm.paymentMethod,
     }).subscribe({
+      next: () => this.afterPayment('Payment recorded.'),
+      error: (err) => this.paymentError(err),
+    });
+  }
+
+  private afterPayment(message: string): void {
+    this.paying.set(false); this.payOk.set(true); this.payMsg.set(message);
+    this.payForm.description = '';
+    this.feesService.myPayments(this.id).subscribe({
+      next: (list) => { this.fees.set(list ?? []); this.syncPaymentTarget(); },
+      error: () => {},
+    });
+    this.loadTransactions();
+  }
+
+  private paymentError(err: any): void {
+    this.paying.set(false); this.payOk.set(false); this.payMsg.set(this.msg(err, 'Could not record the payment.'));
+  }
+
+  resetPassword(s: Student): void {
+    const linkedUserId = s.linkedUserId;
+    if (!linkedUserId) { this.passwordOk.set(false); this.passwordMsg.set('This student has no linked login account.'); return; }
+    if (!this.newPassword || this.newPassword.length < 8) {
+      this.passwordOk.set(false); this.passwordMsg.set('Password must be at least 8 characters.');
+      return;
+    }
+    this.settingPassword.set(true); this.passwordMsg.set('');
+    this.usersService.setPassword(linkedUserId, this.newPassword).subscribe({
       next: () => {
-        this.submittingFee.set(false); this.submitFeeOk.set(true);
-        this.submitFeeMsg.set('Payment submitted and receipt generated.');
-        this.submitForm = { amount: 0, periodLabel: '', description: '', paymentMethod: 'Cash' };
-        this.feesService.myPayments(this.id).subscribe({ next: (list) => this.fees.set(list ?? []), error: () => {} });
-        this.loadTransactions();
+        this.settingPassword.set(false); this.passwordOk.set(true);
+        this.passwordMsg.set('Password updated — hand the new password to the student.');
+        this.newPassword = '';
       },
-      error: (err) => { this.submittingFee.set(false); this.submitFeeOk.set(false); this.submitFeeMsg.set(this.msg(err, 'Could not submit payment.')); },
+      error: (err) => { this.settingPassword.set(false); this.passwordOk.set(false); this.passwordMsg.set(this.msg(err, 'Could not update password.')); },
     });
   }
 

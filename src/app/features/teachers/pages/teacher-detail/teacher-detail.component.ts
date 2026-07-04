@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TeachersService, Staff, Payout, StaffAttendanceRecord, PendingSalary } from '../../teachers.service';
+import { UsersService } from '../../../../core/services/users.service';
 import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from '../../../../core/constants/classes';
 
 /**
@@ -37,6 +38,28 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
                 {{ className(s.classTeacherOfClassId!) }}{{ s.classTeacherOfSectionId ? ' - ' + sectionName(s.classTeacherOfSectionId!) : '' }}
               </span>
               <span *ngIf="!s.classTeacherOfClassId">Not a class teacher</span>
+            </div>
+          </div>
+
+          <!-- Account / password -->
+          <div class="mt-4 pt-4 border-t border-neutral-200">
+            <button *ngIf="!showPasswordForm()" (click)="showPasswordForm.set(true)" type="button"
+              class="text-primary-600 hover:text-primary-700 text-sm font-medium">Reset login password</button>
+            <div *ngIf="showPasswordForm()">
+              <h3 class="text-sm font-semibold text-neutral-900 mb-1">Reset login password</h3>
+              <p class="text-xs text-neutral-500 mb-3">Passwords are stored hashed and cannot be viewed — set a new one and hand it to the teacher. This signs them out everywhere.</p>
+              <div class="flex flex-wrap items-end gap-3">
+                <div>
+                  <label class="block text-xs text-neutral-500 mb-1">New password (min 8 chars) *</label>
+                  <input [(ngModel)]="newPassword" type="text" placeholder="e.g. Teacher@456" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                </div>
+                <button (click)="resetPassword(s)" [disabled]="settingPassword()"
+                  class="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">
+                  {{ settingPassword() ? 'Saving...' : 'Set password' }}
+                </button>
+                <button (click)="showPasswordForm.set(false); newPassword = ''; passwordMsg.set('')" type="button" class="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Cancel</button>
+                <span *ngIf="passwordMsg()" class="text-sm" [class]="passwordOk() ? 'text-success-600' : 'text-error-600'">{{ passwordMsg() }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -149,6 +172,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
 export class TeacherDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private service = inject(TeachersService);
+  private usersService = inject(UsersService);
 
   staff = signal<Staff | null>(null);
   loading = signal(false);
@@ -177,6 +201,12 @@ export class TeacherDetailComponent implements OnInit {
   attMsg = signal('');
   attOk = signal(false);
   attStatus = 'Present';
+
+  showPasswordForm = signal(false);
+  newPassword = '';
+  settingPassword = signal(false);
+  passwordMsg = signal('');
+  passwordOk = signal(false);
 
   classes = SCHOOL_CLASSES;
   sections = SCHOOL_SECTIONS;
@@ -288,6 +318,23 @@ export class TeacherDetailComponent implements OnInit {
     }).subscribe({
       next: () => { this.savingAtt.set(false); this.attOk.set(true); this.attMsg.set('Marked.'); this.loadAttendance(); },
       error: (err) => { this.savingAtt.set(false); this.attOk.set(false); this.attMsg.set(this.msg(err, 'Could not mark.')); },
+    });
+  }
+
+  resetPassword(s: Staff): void {
+    if (!s.linkedUserId) { this.passwordOk.set(false); this.passwordMsg.set('This staff member has no linked login account.'); return; }
+    if (!this.newPassword || this.newPassword.length < 8) {
+      this.passwordOk.set(false); this.passwordMsg.set('Password must be at least 8 characters.');
+      return;
+    }
+    this.settingPassword.set(true); this.passwordMsg.set('');
+    this.usersService.setPassword(s.linkedUserId, this.newPassword).subscribe({
+      next: () => {
+        this.settingPassword.set(false); this.passwordOk.set(true);
+        this.passwordMsg.set('Password updated — hand the new password to the teacher.');
+        this.newPassword = '';
+      },
+      error: (err) => { this.settingPassword.set(false); this.passwordOk.set(false); this.passwordMsg.set(this.msg(err, 'Could not update password.')); },
     });
   }
 

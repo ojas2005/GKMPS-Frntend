@@ -32,4 +32,10 @@ export class UsersService {
   setStatus(id: string, isActive: boolean): Observable<unknown> {
     return this.api.patch(`/api/users/${id}/status?isActive=${isActive}`);
   }
+
+  // Admin-initiated reset -- passwords are one-way hashed server-side, so there is no
+  // "view" equivalent, only setting a new one (which the admin then hands to the person).
+  setPassword(id: string, newPassword: string): Observable<unknown> {
+    return this.api.patch(`/api/users/${id}/password`, { newPassword });
+  }
 }
