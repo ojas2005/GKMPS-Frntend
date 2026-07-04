@@ -23,8 +23,8 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classN
       </div>
 
       <!-- Credentials banner shown after a successful admission -->
-      <div *ngIf="lastCredentials()" class="bg-success-50 border border-success-200 rounded-xl p-4 flex items-start justify-between">
-        <div class="text-sm text-success-800">
+      <div *ngIf="lastCredentials()" class="bg-success-50 border border-success-500 rounded-xl p-4 flex items-start justify-between">
+        <div class="text-sm text-success-700">
           <p class="font-semibold mb-1">Student admitted — hand these credentials to them:</p>
           <p>Login ID: <span class="font-mono font-bold">{{ lastCredentials()!.username }}</span>
              &nbsp;·&nbsp; Password: <span class="font-mono font-bold">{{ lastCredentials()!.password }}</span></p>
