@@ -1,0 +1,33 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # `ng lint` isn't wired up yet (angular.json has no lint builder configured --
+      # add @angular-eslint and an architect "lint" target to enable this, then flip
+      # continue-on-error off). Left in, not deleted, so turning it on later is a
+      # one-line change instead of rediscovering that lint doesn't exist.
+      - name: Lint (soft-fail until @angular-eslint is configured)
+        run: npm run lint
+        continue-on-error: true

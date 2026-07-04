@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/features/attendance/attendance.routes.ts"],
+  "sourcesContent": ["import { Routes } from '@angular/router';\n\nexport const ATTENDANCE_ROUTES: Routes = [\n  {\n    path: '',\n    loadComponent: () => import('./pages/attendance/attendance.component').then(m => m.AttendanceComponent),\n  },\n];\n"],
+  "mappings": ";;;AAEO,IAAM,oBAA4B;EACvC;IACE,MAAM;IACN,eAAe,MAAM,OAAO,qBAAyC,EAAE,KAAK,OAAK,EAAE,mBAAmB;;;",
+  "names": []
+}

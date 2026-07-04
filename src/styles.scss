@@ -1,0 +1,532 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  @apply transition-colors duration-200;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-neutral-50 text-neutral-900 font-sans antialiased;
+}
+
+/* The glowing circle (app-cursor) replaces the native cursor on precise pointers. */
+@media (pointer: fine) {
+  html, body, *, *::before, *::after {
+    cursor: none !important;
+  }
+}
+
+/* ==========================================================================
+   Motion & micro-interactions
+   The components are plain Tailwind utilities, so all hover/press/scroll
+   animation lives here globally instead of being repeated in 15 templates.
+   NOTE: entrance animations use fill-mode `backwards` (not `both`/`forwards`)
+   so that once they finish, hover transforms driven by transitions still work.
+   ========================================================================== */
+
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.995); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes nav-item-in {
+  from { opacity: 0; transform: translateX(-22px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.94); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes bell-shake {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(14deg); }
+  40% { transform: rotate(-12deg); }
+  60% { transform: rotate(7deg); }
+  80% { transform: rotate(-4deg); }
+}
+
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes gradient-drift {
+  0%   { background-position: 0% 0%; }
+  50%  { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+/* Routed page content fades/slides in on every navigation (the routed
+   component is inserted as a sibling of <router-outlet> inside <main>). */
+main > *:not(router-outlet) {
+  display: block;
+  animation: page-in 0.38s cubic-bezier(0.22, 0.9, 0.35, 1) backwards;
+}
+
+/* --------------------------------------------------------------------------
+   Sidebar: slides in when opened, then each nav item cascades in after it.
+   (<nav> is only used by the sidebar.)
+   -------------------------------------------------------------------------- */
+app-sidebar > div:first-child {
+  animation: slide-in-left 0.32s cubic-bezier(0.22, 0.9, 0.35, 1) backwards;
+}
+
+nav a {
+  animation: nav-item-in 0.4s cubic-bezier(0.22, 0.9, 0.35, 1) backwards;
+}
+
+@for $i from 1 through 14 {
+  nav a:nth-child(#{$i}) {
+    animation-delay: #{0.08 + ($i - 1) * 0.045}s;
+  }
+}
+
+/* Nav hover: a primary gradient FILL sweeps in from the left and the label
+   turns white; the link also nudges right. Active route keeps the full fill. */
+nav a {
+  position: relative;
+  background-image: linear-gradient(90deg, theme('colors.primary.500'), theme('colors.primary.600'));
+  background-repeat: no-repeat;
+  background-position: left center;
+  background-size: 0% 100%;
+  /* !important: the templates carry a `transition-colors` utility class which
+     would otherwise out-rank this type selector and drop the extra easing. */
+  transition:
+    color 0.25s ease,
+    background-size 0.35s cubic-bezier(0.22, 0.9, 0.35, 1),
+    transform 0.25s cubic-bezier(0.22, 0.9, 0.35, 1),
+    box-shadow 0.3s ease !important;
+
+  &:hover {
+    background-size: 100% 100%;
+    color: #fff !important;
+    transform: translateX(4px);
+    box-shadow: 0 6px 18px -6px rgba(14, 165, 233, 0.5);
+  }
+
+  &:hover span {
+    color: #fff !important;
+  }
+
+  &:active {
+    transform: translateX(4px) scale(0.97);
+  }
+
+  /* routerLinkActive applies bg-primary-50 — promote it to the full fill. */
+  &.bg-primary-50 {
+    background-size: 100% 100%;
+    color: #fff !important;
+    box-shadow: 0 6px 18px -6px rgba(14, 165, 233, 0.45);
+
+    span { color: #fff !important; }
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Buttons
+   - outline/bordered buttons: sliding color fill + text inversion on hover
+   - solid primary buttons: glossy shine sweep + glow lift
+   - every button: press-down scale + soft click ripple
+   -------------------------------------------------------------------------- */
+button {
+  position: relative;
+  overflow: hidden;
+  /* !important: many buttons carry `transition-colors`, which would otherwise
+     out-rank this and make the hover/press effects snap instead of ease. */
+  transition:
+    color 0.25s ease,
+    background-color 0.2s ease,
+    background-size 0.35s cubic-bezier(0.22, 0.9, 0.35, 1),
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.16s cubic-bezier(0.22, 0.9, 0.35, 1) !important;
+
+  &:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+
+  &:not(:disabled):active {
+    transform: translateY(0) scale(0.95);
+    transition-duration: 0.06s;
+  }
+
+  /* Click ripple: a currentColor flash expanding from the center. */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background-image: radial-gradient(circle, currentColor 10%, transparent 10.01%);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 1000% 1000%;
+    opacity: 0;
+    transition: background-size 0.5s ease, opacity 0.6s ease;
+  }
+
+  &:not(:disabled):active::after {
+    background-size: 0% 0%;
+    opacity: 0.2;
+    transition: 0s;
+  }
+}
+
+/* Outline buttons (they all carry `border`): primary fill slides in. */
+button.border:not(:disabled) {
+  background-image: linear-gradient(90deg, theme('colors.primary.500'), theme('colors.primary.600'));
+  background-repeat: no-repeat;
+  background-position: left center;
+  background-size: 0% 100%;
+
+  &:hover {
+    background-size: 100% 100%;
+    color: #fff !important;
+    border-color: transparent !important;
+    box-shadow: 0 6px 16px -6px rgba(14, 165, 233, 0.5);
+  }
+}
+
+/* Solid primary buttons: glow + a diagonal shine that sweeps across. */
+button[class*="bg-primary-6"]:not(:disabled) {
+  &:hover {
+    box-shadow: 0 8px 20px -6px rgba(2, 132, 199, 0.55);
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -10%;
+    bottom: -10%;
+    left: 0;
+    width: 45%;
+    background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.35) 50%, transparent 80%);
+    transform: translateX(-130%) skewX(-18deg);
+    transition: transform 0.55s ease;
+    pointer-events: none;
+  }
+
+  &:hover::before {
+    transform: translateX(280%) skewX(-18deg);
+  }
+}
+
+/* Icons inside buttons/links respond to hover. */
+button svg,
+a svg {
+  transition: transform 0.25s cubic-bezier(0.22, 0.9, 0.35, 1);
+}
+
+button:not(:disabled):hover > svg {
+  transform: scale(1.15);
+}
+
+/* Theme toggle: playful rotate on hover. */
+button[aria-label="Toggle Theme"]:not(:disabled):hover > svg {
+  transform: scale(1.1) rotate(40deg);
+}
+
+/* Sidebar toggle: rotates into place. */
+button[aria-label="Toggle Sidebar"]:not(:disabled):hover > svg {
+  transform: scale(1.1) rotate(90deg);
+}
+
+/* Notification bell (the only .relative icon button): shake on hover. */
+button.relative:hover > svg {
+  animation: bell-shake 0.55s ease both;
+}
+
+/* --------------------------------------------------------------------------
+   Cards, tables, rows
+   -------------------------------------------------------------------------- */
+
+/* Children of any card/stat grid cascade in one after another. */
+@keyframes grid-item-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.grid > * {
+  animation: grid-item-in 0.5s cubic-bezier(0.22, 0.9, 0.35, 1) backwards;
+}
+
+@for $i from 1 through 8 {
+  .grid > *:nth-child(#{$i}) {
+    animation-delay: #{0.06 + ($i - 1) * 0.07}s;
+  }
+}
+
+.grid > *:nth-child(n + 9) {
+  animation-delay: 0.6s;
+}
+
+/* White cards lift with a primary-tinted glow on hover. */
+.bg-white.rounded-xl.shadow-sm {
+  transition: box-shadow 0.3s ease, transform 0.3s cubic-bezier(0.22, 0.9, 0.35, 1), border-color 0.3s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      0 14px 30px -10px rgba(0, 0, 0, 0.14),
+      0 0 0 1px rgba(14, 165, 233, 0.14);
+  }
+}
+
+/* Table rows: staggered entrance + gradient wash & accent on hover. */
+tbody tr {
+  animation: row-in 0.32s ease backwards;
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+@for $i from 1 through 12 {
+  tbody tr:nth-child(#{$i}) {
+    animation-delay: #{($i - 1) * 0.035}s;
+  }
+}
+
+tbody tr.cursor-pointer:hover {
+  transform: translateX(4px);
+  background: linear-gradient(90deg, rgba(14, 165, 233, 0.09), rgba(14, 165, 233, 0.02) 55%, transparent) !important;
+  box-shadow: inset 3px 0 0 theme('colors.primary.500');
+}
+
+tbody tr.cursor-pointer:active {
+  transform: translateX(4px) scale(0.995);
+}
+
+/* Attendance chips / pills pop on hover. */
+span.rounded-full,
+span.rounded-lg {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+div > span.rounded-lg:hover,
+td span.rounded-full:hover {
+  transform: scale(1.1);
+  box-shadow: 0 3px 10px -3px rgba(0, 0, 0, 0.18);
+}
+
+/* --------------------------------------------------------------------------
+   Inputs: focus ring grows in smoothly instead of snapping.
+   -------------------------------------------------------------------------- */
+input,
+select,
+textarea {
+  /* Explicit colors so typed text always contrasts with the field background
+     (inputs otherwise inherit the theme text color over a UA-white background,
+     which turns white-on-white in dark mode). */
+  background-color: #ffffff;
+  color: theme('colors.neutral.900');
+  caret-color: theme('colors.primary.500');
+  transition: border-color 0.2s ease, box-shadow 0.25s ease, background-color 0.2s ease;
+
+  &::placeholder {
+    color: theme('colors.neutral.400');
+  }
+
+  &:focus {
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.18);
+    border-color: theme('colors.primary.500');
+  }
+
+  &:hover:not(:focus):not(:disabled) {
+    border-color: theme('colors.neutral.400');
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Topbar micro-interactions
+   -------------------------------------------------------------------------- */
+
+/* Unread-notification dot pulses a soft red ring. */
+@keyframes badge-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); }
+  70%  { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+button span.bg-error-500.rounded-full {
+  animation: badge-pulse 2s ease-out infinite;
+}
+
+/* Search field stretches open on focus. */
+input[placeholder="Search..."] {
+  transition: width 0.35s cubic-bezier(0.22, 0.9, 0.35, 1);
+
+  &:focus {
+    width: 13rem;
+  }
+}
+
+/* Avatar gets a playful tilt + glow on hover. */
+div.rounded-full[class*="from-primary"] {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+
+  &:hover {
+    transform: scale(1.1) rotate(8deg);
+    box-shadow: 0 6px 16px -4px rgba(2, 132, 199, 0.5);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Dropdowns / overlays (e.g. the topbar user menu) pop in.
+   -------------------------------------------------------------------------- */
+.animate-pop-in,
+div.absolute.shadow-lg {
+  animation: pop-in 0.18s cubic-bezier(0.22, 0.9, 0.35, 1) backwards;
+  transform-origin: top right;
+}
+
+/* --------------------------------------------------------------------------
+   Auth screens: the gradient backdrop slowly drifts.
+   -------------------------------------------------------------------------- */
+.min-h-screen.bg-gradient-to-br {
+  background-size: 220% 220%;
+  animation: gradient-drift 14s ease-in-out infinite;
+}
+
+/* --------------------------------------------------------------------------
+   Scrolling
+   -------------------------------------------------------------------------- */
+main {
+  scroll-behavior: smooth;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-neutral-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-neutral-300 rounded-full;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-neutral-400;
+  border-width: 1px;
+}
+
+/* Accessibility: honor reduced-motion preferences (and restore the cursor). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+    cursor: auto !important;
+  }
+
+  app-cursor {
+    display: none !important;
+  }
+}
+
+/* ==========================================================================
+   Dark mode
+   The app's components use fixed light utilities (bg-white, text-neutral-900,
+   etc.) rather than dark: variants, so these global overrides remap the common
+   surface / text / border utilities when the `dark` class is on <html>.
+   ========================================================================== */
+.dark {
+  body {
+    @apply bg-neutral-900 text-neutral-100;
+  }
+
+  /* Surfaces */
+  .bg-white { background-color: #1f1f23 !important; }
+  .bg-neutral-50 { background-color: #18181b !important; }
+  .bg-neutral-100 { background-color: #27272a !important; }
+
+  /* Hover surfaces */
+  .hover\:bg-neutral-50:hover { background-color: #27272a !important; }
+  .hover\:bg-neutral-100:hover { background-color: #3f3f46 !important; }
+
+  /* Text */
+  .text-neutral-900 { color: #f4f4f5 !important; }
+  .text-neutral-700 { color: #d4d4d8 !important; }
+  .text-neutral-600 { color: #a1a1aa !important; }
+  .text-neutral-500 { color: #8b8b93 !important; }
+
+  /* Borders */
+  .border-neutral-200 { border-color: #3f3f46 !important; }
+  .border-neutral-300 { border-color: #52525b !important; }
+
+  /* Form fields: dark surface, light text, visible caret & placeholder. */
+  input,
+  select,
+  textarea {
+    background-color: #27272a !important;
+    color: #f4f4f5 !important;
+    border-color: #52525b;
+    caret-color: #38bdf8;
+
+    &::placeholder {
+      color: #8b8b93;
+    }
+
+    &:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.22);
+    }
+  }
+
+  select option {
+    background-color: #27272a;
+    color: #f4f4f5;
+  }
+
+  /* Nav / button fills already carry their own colors; keep hover text white. */
+  nav a:hover, nav a:hover span,
+  nav a.bg-primary-50, nav a.bg-primary-50 span,
+  button.border:not(:disabled):hover {
+    color: #fff !important;
+  }
+
+  /* Card hover lift needs a stronger shadow to read on dark surfaces. */
+  .bg-white.rounded-xl.shadow-sm:hover {
+    box-shadow:
+      0 14px 30px -10px rgba(0, 0, 0, 0.6),
+      0 0 0 1px rgba(14, 165, 233, 0.22);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar-track { background-color: #27272a; }
+  ::-webkit-scrollbar-thumb { background-color: #52525b; }
+}
+
+/* Focus visible styles */
+:focus-visible {
+  @apply outline-2 outline-offset-2 outline-primary-500;
+}
+
+/* Smooth transitions for interactive elements */
+button,
+a,
+input,
+select,
+textarea {
+  &:focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary-500;
+  }
+}

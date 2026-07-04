@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(zap read *)",
+      "Bash(zap ls *)",
+      "Bash(node_modules/.bin/ng serve *)",
+      "Bash(npm install *)",
+      "Bash(zap grep *)",
+      "Bash(pkill -f \"ng serve\")",
+      "Bash(pkill -9 -f \"ng serve\")",
+      "Bash(zap curl *)",
+      "Bash(zap npx *)"
+    ]
+  }
+}
