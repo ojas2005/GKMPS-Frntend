@@ -1,6 +1,8 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import {
   TimetableService, ScheduleConfig, TeacherAssignment, PrePrimaryAssignment,
   TimetableSlot, TeacherSlot,
@@ -171,7 +173,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
           <p *ngIf="viewError()" class="text-neutral-500 text-sm">{{ viewError() }}</p>
           <table *ngIf="classDay().length > 0" class="w-full text-sm">
             <thead class="text-neutral-500 text-left text-xs">
-              <tr><th class="py-2">Period</th><th class="py-2">Time</th><th class="py-2">Subject</th></tr>
+              <tr><th class="py-2">Period</th><th class="py-2">Time</th><th class="py-2">Subject</th><th class="py-2">Teacher</th></tr>
             </thead>
             <tbody>
               <ng-container *ngFor="let s of classDay()">
@@ -179,9 +181,10 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
                   <td class="py-2 font-medium text-neutral-900">P{{ s.period }}</td>
                   <td class="py-2 text-neutral-600">{{ s.startTime }} - {{ s.endTime }}</td>
                   <td class="py-2 text-neutral-900">{{ s.subjectName || '—' }}</td>
+                  <td class="py-2 text-neutral-600">{{ teacherName(s.teacherStaffId) }}</td>
                 </tr>
                 <tr *ngIf="s.period === 4" class="border-t border-neutral-100 bg-warning-50">
-                  <td class="py-2 font-medium text-warning-700" colspan="3">Lunch · 10:40 - 11:20</td>
+                  <td class="py-2 font-medium text-warning-700" colspan="4">Lunch · 10:40 - 11:20</td>
                 </tr>
               </ng-container>
             </tbody>
@@ -305,7 +308,11 @@ export class TimetableComponent implements OnInit {
     if (this.isStudent) {
       if (!this.myClassId) { this.viewError.set('Your account is not linked to a class yet.'); return; }
       this.service.getForClass(this.myClassId, this.mySectionId).subscribe({
-        next: (tt) => this.classDay.set(this.oneDay(tt?.slots ?? [])),
+        next: (tt) => {
+          const day = this.oneDay(tt?.slots ?? []);
+          this.classDay.set(day);
+          this.resolveTeacherNames(day);
+        },
         error: (err) => this.viewError.set(err?.status === 404
           ? 'No timetable has been published for your class yet.'
           : 'Could not load your timetable.'),
@@ -331,6 +338,17 @@ export class TimetableComponent implements OnInit {
   // The schedule repeats daily, so every view renders Monday only.
   private oneDay(slots: TimetableSlot[]): TimetableSlot[] {
     return slots.filter((s) => s.day === 'Monday').sort((a, b) => a.period - b.period);
+  }
+
+  // Student/parent view: slots only carry teacherStaffId, so look up each distinct
+  // teacher by id (GET /api/staff/{id} is allowed for any signed-in user) and feed the
+  // shared teachers() signal that teacherName() reads.
+  private resolveTeacherNames(slots: TimetableSlot[]): void {
+    const ids = [...new Set(slots.map((s) => s.teacherStaffId).filter((x): x is string => !!x))];
+    if (ids.length === 0) return;
+    forkJoin(ids.map((id) => this.teachersService.get(id).pipe(catchError(() => of(null))))).subscribe(
+      (list) => this.teachers.set(list.filter((s): s is Staff => !!s)),
+    );
   }
 
   private applyConfig(cfg: ScheduleConfig): void {
