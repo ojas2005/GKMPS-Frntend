@@ -8,7 +8,7 @@ import { FeesService, FeePayment, PaymentTransactionSummary } from '../../../fee
 import { ExaminationService, StudentResult } from '../../../examination/examination.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { UsersService } from '../../../../core/services/users.service';
-import { classNameById, sectionNameById } from '../../../../core/constants/classes';
+import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from '../../../../core/constants/classes';
 
 /**
  * Owner/staff view: everything about one student in one place — profile, attendance
@@ -50,26 +50,105 @@ import { classNameById, sectionNameById } from '../../../../core/constants/class
             <div><span class="text-neutral-500 block text-xs">Date of birth</span>{{ dob(s) ? (dob(s) | date:'mediumDate') : '—' }}</div>
             <div><span class="text-neutral-500 block text-xs">Guardian</span>{{ s['parentName'] || s.guardianName || '—' }}</div>
             <div><span class="text-neutral-500 block text-xs">Guardian phone</span>{{ s['parentPhone'] || s.guardianPhone || '—' }}</div>
+            <div *ngIf="canManageAccount()">
+              <span class="text-neutral-500 block text-xs">Login ID</span>
+              <span class="font-mono">{{ loginId() || '—' }}</span>
+            </div>
           </div>
 
-          <!-- Account / password (Admin/Principal/SuperAdmin only) -->
+          <!-- New credentials just set (password reset or first look). Password is only ever
+               shown here, right after being typed/set -- never retrieved from storage. -->
+          <div *ngIf="justSetPassword()" class="mt-4 bg-success-50 border border-success-500 rounded-xl p-4 text-sm text-success-800">
+            <p class="font-semibold mb-1">Password updated — hand these to the student:</p>
+            <p>Login ID: <span class="font-mono font-bold">{{ loginId() }}</span>
+               &nbsp;·&nbsp; Password: <span class="font-mono font-bold">{{ justSetPassword() }}</span></p>
+          </div>
+
+          <!-- Edit details (Admin/Principal/SuperAdmin only) -->
           <div *ngIf="canManageAccount()" class="mt-4 pt-4 border-t border-neutral-200">
-            <button *ngIf="!showPasswordForm()" (click)="showPasswordForm.set(true)" type="button"
-              class="text-primary-600 hover:text-primary-700 text-sm font-medium">Reset login password</button>
-            <div *ngIf="showPasswordForm()">
-              <h3 class="text-sm font-semibold text-neutral-900 mb-1">Reset login password</h3>
-              <p class="text-xs text-neutral-500 mb-3">Passwords are stored hashed and cannot be viewed — set a new one and hand it to the student. This signs them out everywhere.</p>
-              <div class="flex flex-wrap items-end gap-3">
+            <button *ngIf="!showEditForm()" (click)="startEdit(s)" type="button"
+              class="text-primary-600 hover:text-primary-700 text-sm font-medium">Edit details</button>
+            <div *ngIf="showEditForm()">
+              <h3 class="text-sm font-semibold text-neutral-900 mb-1">Edit student details</h3>
+              <p class="text-xs text-neutral-500 mb-3">Everything collected at admission. Login ID and password aren't changed here — use "Reset login password" below for that.</p>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">New password (min 8 chars) *</label>
-                  <input [(ngModel)]="newPassword" type="text" placeholder="e.g. Student@456" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1">Full name *</label>
+                  <input [(ngModel)]="editForm.fullName" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
-                <button (click)="resetPassword(s)" [disabled]="settingPassword()"
+                <div>
+                  <label class="block text-xs text-neutral-500 mb-1">Admission number *</label>
+                  <input [(ngModel)]="editForm.admissionNumber" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs text-neutral-500 mb-1">Date of birth *</label>
+                  <input [(ngModel)]="editForm.dateOfBirth" type="date" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs text-neutral-500 mb-1">Gender *</label>
+                  <select [(ngModel)]="editForm.gender" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+                    <option>Male</option><option>Female</option><option>Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs text-neutral-500 mb-1">Class *</label>
+                  <select [(ngModel)]="editForm.classId" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+                    <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs text-neutral-500 mb-1">Section *</label>
+                  <select [(ngModel)]="editForm.sectionId" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+                    <option *ngFor="let sec of sections" [value]="sec.id">Section {{ sec.name }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs text-neutral-500 mb-1">Guardian name</label>
+                  <input [(ngModel)]="editForm.parentName" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs text-neutral-500 mb-1">Guardian phone</label>
+                  <input [(ngModel)]="editForm.parentPhone" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs text-neutral-500 mb-1">Guardian email</label>
+                  <input [(ngModel)]="editForm.parentEmail" type="email" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs text-neutral-500 mb-1">Address</label>
+                  <input [(ngModel)]="editForm.address" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                </div>
+              </div>
+              <div class="mt-3 flex items-center gap-3">
+                <button (click)="saveEdit()" [disabled]="savingEdit()"
                   class="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">
-                  {{ settingPassword() ? 'Saving...' : 'Set password' }}
+                  {{ savingEdit() ? 'Saving...' : 'Save details' }}
                 </button>
-                <button (click)="showPasswordForm.set(false); newPassword = ''; passwordMsg.set('')" type="button" class="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Cancel</button>
-                <span *ngIf="passwordMsg()" class="text-sm" [class]="passwordOk() ? 'text-success-600' : 'text-error-600'">{{ passwordMsg() }}</span>
+                <button (click)="showEditForm.set(false); editMsg.set('')" type="button" class="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Cancel</button>
+                <span *ngIf="editMsg()" class="text-sm" [class]="editOk() ? 'text-success-600' : 'text-error-600'">{{ editMsg() }}</span>
+              </div>
+
+              <!-- Password reset stays available -- it's a distinct, Identity.API-owned
+                   action (login credentials), not part of this admission-details record. -->
+              <div class="mt-4 pt-4 border-t border-neutral-100">
+                <button *ngIf="!showPasswordForm()" (click)="showPasswordForm.set(true)" type="button"
+                  class="text-primary-600 hover:text-primary-700 text-xs font-medium">Reset login password</button>
+                <div *ngIf="showPasswordForm()">
+                  <h4 class="text-xs font-semibold text-neutral-900 mb-1">Reset login password</h4>
+                  <p class="text-xs text-neutral-500 mb-3">An existing password can never be shown again once set (it's stored one-way hashed, same as everywhere else) — set a new one here and it'll be displayed once, right above, so you can hand it over. This signs the student out everywhere.</p>
+                  <div class="flex flex-wrap items-end gap-3">
+                    <div>
+                      <label class="block text-xs text-neutral-500 mb-1">New password (min 8 chars) *</label>
+                      <input [(ngModel)]="newPassword" type="text" placeholder="e.g. Student@456" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                    </div>
+                    <button (click)="resetPassword(s)" [disabled]="settingPassword()"
+                      class="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">
+                      {{ settingPassword() ? 'Saving...' : 'Set password' }}
+                    </button>
+                    <button (click)="showPasswordForm.set(false); newPassword = ''; passwordMsg.set('')" type="button" class="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Cancel</button>
+                    <span *ngIf="passwordMsg() && !passwordOk()" class="text-sm text-error-600">{{ passwordMsg() }}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -266,12 +345,30 @@ export class StudentDetailComponent implements OnInit {
   canSubmitFees = (): boolean => this.auth.hasRole('SuperAdmin', 'Principal', 'Admin', 'Accountant');
   canManageAccount = (): boolean => this.auth.hasRole('SuperAdmin', 'Principal', 'Admin');
 
+  // The login ID is fine to display (it's an identifier, not a secret) and is fetched
+  // once from Identity.API. The password is the opposite: never retrievable once set
+  // (one-way hashed), so this only ever holds a password the owner just typed THIS
+  // session, immediately after a successful reset -- never anything read from storage.
+  loginId = signal<string | null>(null);
+  justSetPassword = signal<string | null>(null);
+
   showPasswordForm = signal(false);
   newPassword = '';
   settingPassword = signal(false);
   passwordMsg = signal('');
   passwordOk = signal(false);
 
+  showEditForm = signal(false);
+  editForm = {
+    admissionNumber: '', fullName: '', dateOfBirth: '', gender: '', classId: '', sectionId: '',
+    parentName: '', parentEmail: '', parentPhone: '', address: '',
+  };
+  savingEdit = signal(false);
+  editMsg = signal('');
+  editOk = signal(false);
+
+  classes = SCHOOL_CLASSES;
+  sections = SCHOOL_SECTIONS;
   className = classNameById;
   sectionName = sectionNameById;
 
@@ -298,7 +395,16 @@ export class StudentDetailComponent implements OnInit {
     this.loading.set(true);
 
     this.studentsService.get(id).subscribe({
-      next: (s) => { this.student.set(s); this.loading.set(false); },
+      next: (s) => {
+        this.student.set(s);
+        this.loading.set(false);
+        if (s.linkedUserId && this.canManageAccount()) {
+          this.usersService.get(s.linkedUserId).subscribe({
+            next: (u) => this.loginId.set((u['username'] as string) || u.email),
+            error: () => {},
+          });
+        }
+      },
       error: (err) => { this.error.set(this.msg(err, 'Failed to load the student.')); this.loading.set(false); },
     });
 
@@ -420,6 +526,51 @@ export class StudentDetailComponent implements OnInit {
     this.paying.set(false); this.payOk.set(false); this.payMsg.set(this.msg(err, 'Could not record the payment.'));
   }
 
+  startEdit(s: Student): void {
+    this.editForm = {
+      admissionNumber: s.admissionNumber ?? '',
+      fullName: s.fullName ?? '',
+      dateOfBirth: (this.dob(s) ?? '').slice(0, 10),
+      gender: (s['gender'] as string) ?? '',
+      classId: s.classId ?? '',
+      sectionId: s.sectionId ?? '',
+      parentName: s['parentName'] as string ?? s.guardianName ?? '',
+      parentEmail: s['parentEmail'] as string ?? '',
+      parentPhone: s['parentPhone'] as string ?? s.guardianPhone ?? '',
+      address: s['address'] as string ?? '',
+    };
+    this.showEditForm.set(true);
+    this.editMsg.set('');
+  }
+
+  saveEdit(): void {
+    const f = this.editForm;
+    if (!f.admissionNumber.trim() || !f.fullName.trim() || !f.dateOfBirth || !f.gender || !f.classId || !f.sectionId) {
+      this.editOk.set(false); this.editMsg.set('Admission number, full name, date of birth, gender, class and section are required.');
+      return;
+    }
+    this.savingEdit.set(true); this.editMsg.set('');
+    this.studentsService.update(this.id, {
+      admissionNumber: f.admissionNumber.trim(),
+      fullName: f.fullName.trim(),
+      dateOfBirth: f.dateOfBirth,
+      gender: f.gender,
+      classId: f.classId,
+      sectionId: f.sectionId,
+      parentName: f.parentName.trim() || undefined,
+      parentEmail: f.parentEmail.trim() || undefined,
+      parentPhone: f.parentPhone.trim() || undefined,
+      address: f.address.trim() || undefined,
+    }).subscribe({
+      next: (updated) => {
+        this.savingEdit.set(false); this.editOk.set(true); this.editMsg.set('Details updated.');
+        this.student.set(updated);
+        this.showEditForm.set(false);
+      },
+      error: (err) => { this.savingEdit.set(false); this.editOk.set(false); this.editMsg.set(this.msg(err, 'Could not save details.')); },
+    });
+  }
+
   resetPassword(s: Student): void {
     const linkedUserId = s.linkedUserId;
     if (!linkedUserId) { this.passwordOk.set(false); this.passwordMsg.set('This student has no linked login account.'); return; }
@@ -428,11 +579,13 @@ export class StudentDetailComponent implements OnInit {
       return;
     }
     this.settingPassword.set(true); this.passwordMsg.set('');
-    this.usersService.setPassword(linkedUserId, this.newPassword).subscribe({
+    const justSet = this.newPassword;
+    this.usersService.setPassword(linkedUserId, justSet).subscribe({
       next: () => {
         this.settingPassword.set(false); this.passwordOk.set(true);
-        this.passwordMsg.set('Password updated — hand the new password to the student.');
+        this.justSetPassword.set(justSet); // shown in the credentials banner above -- this run only
         this.newPassword = '';
+        this.showPasswordForm.set(false);
       },
       error: (err) => { this.settingPassword.set(false); this.passwordOk.set(false); this.passwordMsg.set(this.msg(err, 'Could not update password.')); },
     });

@@ -11,13 +11,35 @@ export interface Student {
   linkedUserId?: string;
   admissionNumber?: string;
   fullName: string;
+  dateOfBirth?: string;
+  gender?: string;
   classId?: string;
   sectionId?: string;
   rollNumber?: string;
   guardianName?: string;
   guardianPhone?: string;
+  parentName?: string;
+  parentEmail?: string;
+  parentPhone?: string;
+  address?: string;
   status?: string;
   [key: string]: unknown;
+}
+
+// Everything editable on the student detail page's "Edit details" form -- the same set
+// collected at admission, minus login credentials (Identity.API-owned, handled by the
+// separate password-reset action).
+export interface UpdateStudentDetails {
+  admissionNumber: string;
+  fullName: string;
+  dateOfBirth: string; // "yyyy-mm-dd"
+  gender: string;
+  classId: string;
+  sectionId: string;
+  parentName?: string;
+  parentEmail?: string;
+  parentPhone?: string;
+  address?: string;
 }
 
 // What the admit form collects. The owner sets the student's login ID + password and
@@ -117,6 +139,15 @@ export class StudentsService {
 
   changeClass(id: string, classId: string, sectionId: string): Observable<Student> {
     return this.api.patch(`/api/students/${id}/class`, { classId, sectionId });
+  }
+
+  // Full edit of everything collected at admission (name, DOB, gender, class/section,
+  // admission number, guardian details) in one shot.
+  update(id: string, details: UpdateStudentDetails): Observable<Student> {
+    return this.api.put(`/api/students/${id}`, {
+      ...details,
+      dateOfBirth: `${details.dateOfBirth}T00:00:00Z`,
+    });
   }
 
   activeByClass(): Observable<Array<{ classId: string; count: number }>> {
