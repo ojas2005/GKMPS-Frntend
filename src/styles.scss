@@ -409,6 +409,85 @@ div.absolute.shadow-lg {
 }
 
 /* --------------------------------------------------------------------------
+   Skeleton loaders
+   A shared shimmer placeholder — drop `.skeleton` on a sized box while data
+   loads instead of plain "Loading..." text.
+   -------------------------------------------------------------------------- */
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton {
+  background-image: linear-gradient(
+    90deg,
+    theme('colors.neutral.200') 25%,
+    theme('colors.neutral.100') 37%,
+    theme('colors.neutral.200') 63%
+  );
+  background-size: 200% 100%;
+  border-radius: 0.5rem;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+/* --------------------------------------------------------------------------
+   Inline panels: unfold on open instead of snapping into place.
+   Add `.reveal-panel` to a block shown by *ngIf (edit forms, sub-panels).
+   -------------------------------------------------------------------------- */
+@keyframes panel-reveal {
+  from { opacity: 0; transform: translateY(-6px) scale(0.99); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.reveal-panel {
+  animation: panel-reveal 0.3s cubic-bezier(0.22, 0.9, 0.35, 1) backwards;
+}
+
+/* --------------------------------------------------------------------------
+   Modal dialog: blurred backdrop fades in, card scales up. Reusable classes
+   for any centered overlay (`.modal-backdrop` wrapping a `.modal-card`).
+   -------------------------------------------------------------------------- */
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-backdrop {
+  animation: backdrop-in 0.2s ease;
+  backdrop-filter: blur(2px);
+}
+
+.modal-card {
+  animation: modal-in 0.28s cubic-bezier(0.22, 0.9, 0.35, 1) backwards;
+}
+
+/* --------------------------------------------------------------------------
+   Toasts: slide in from the right, slide back out when dismissed.
+   -------------------------------------------------------------------------- */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(120%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes toast-out {
+  from { opacity: 1; transform: translateX(0); max-height: 8rem; margin-bottom: 0.5rem; }
+  to   { opacity: 0; transform: translateX(120%); max-height: 0; margin-bottom: 0; }
+}
+
+.toast-item {
+  animation: toast-in 0.3s cubic-bezier(0.22, 0.9, 0.35, 1);
+}
+
+.toast-item.toast-leaving {
+  animation: toast-out 0.25s ease forwards;
+}
+
+/* --------------------------------------------------------------------------
    Auth screens: the gradient backdrop slowly drifts.
    -------------------------------------------------------------------------- */
 .min-h-screen.bg-gradient-to-br {
@@ -540,6 +619,11 @@ main {
   /* Scrollbar */
   ::-webkit-scrollbar-track { background-color: #27272a; }
   ::-webkit-scrollbar-thumb { background-color: #52525b; }
+
+  /* Skeleton shimmer tuned for dark surfaces. */
+  .skeleton {
+    background-image: linear-gradient(90deg, #27272a 25%, #3f3f46 37%, #27272a 63%);
+  }
 }
 
 /* Focus visible styles */

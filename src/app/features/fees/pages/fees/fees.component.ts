@@ -46,7 +46,9 @@ interface SearchPendingRow {
         </p>
       </div>
       <div *ngIf="selfService" class="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
-        <div *ngIf="loading()" class="p-8 text-center text-neutral-500">Loading your fees...</div>
+        <div *ngIf="loading()" class="p-5 space-y-3">
+          <div *ngFor="let i of [1,2,3,4,5]" class="skeleton h-11"></div>
+        </div>
         <div *ngIf="error()" class="p-8 text-center text-error-600">{{ error() }}</div>
         <div *ngIf="!loading() && !error() && myFees().length === 0" class="p-8 text-center text-neutral-500">No fee records yet.</div>
         <table *ngIf="!loading() && !error() && myFees().length > 0" class="w-full text-sm">
@@ -206,7 +208,9 @@ interface SearchPendingRow {
           </select>
           <button (click)="load()" class="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Load</button>
         </div>
-        <div *ngIf="loading()" class="p-8 text-center text-neutral-500">Loading...</div>
+        <div *ngIf="loading()" class="p-5 space-y-3">
+          <div *ngFor="let i of [1,2,3,4,5]" class="skeleton h-11"></div>
+        </div>
         <div *ngIf="error()" class="p-8 text-center text-error-600">{{ error() }}</div>
         <div *ngIf="!loading() && !error() && rows().length === 0" class="p-8 text-center text-neutral-500">No fee structures.</div>
         <table *ngIf="!loading() && !error() && rows().length > 0" class="w-full text-sm">

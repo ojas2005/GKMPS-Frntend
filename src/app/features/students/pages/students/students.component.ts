@@ -111,7 +111,9 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classN
 
       <!-- List -->
       <div class="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
-        <div *ngIf="loading()" class="p-8 text-center text-neutral-500">Loading students...</div>
+        <div *ngIf="loading()" class="p-5 space-y-3">
+          <div *ngFor="let i of [1,2,3,4,5,6]" class="skeleton h-11"></div>
+        </div>
         <div *ngIf="error()" class="p-8 text-center text-error-600">{{ error() }}</div>
         <div *ngIf="!loading() && !error() && students().length === 0" class="p-8 text-center text-neutral-500">
           No students found. Admit one to get started.

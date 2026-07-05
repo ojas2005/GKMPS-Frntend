@@ -8,6 +8,7 @@ import { FeesService, FeePayment, PaymentTransactionSummary } from '../../../fee
 import { ExaminationService, StudentResult } from '../../../examination/examination.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { UsersService } from '../../../../core/services/users.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from '../../../../core/constants/classes';
 
 /**
@@ -68,7 +69,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
           <div *ngIf="canManageAccount()" class="mt-4 pt-4 border-t border-neutral-200">
             <button *ngIf="!showEditForm()" (click)="startEdit(s)" type="button"
               class="text-primary-600 hover:text-primary-700 text-sm font-medium">Edit details</button>
-            <div *ngIf="showEditForm()">
+            <div *ngIf="showEditForm()" class="reveal-panel">
               <h3 class="text-sm font-semibold text-neutral-900 mb-1">Edit student details</h3>
               <p class="text-xs text-neutral-500 mb-3">Everything collected at admission. Login ID and password aren't changed here — use "Reset login password" below for that.</p>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -133,7 +134,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
               <div class="mt-4 pt-4 border-t border-neutral-100">
                 <button *ngIf="!showPasswordForm()" (click)="showPasswordForm.set(true)" type="button"
                   class="text-primary-600 hover:text-primary-700 text-xs font-medium">Reset login password</button>
-                <div *ngIf="showPasswordForm()">
+                <div *ngIf="showPasswordForm()" class="reveal-panel">
                   <h4 class="text-xs font-semibold text-neutral-900 mb-1">Reset login password</h4>
                   <p class="text-xs text-neutral-500 mb-3">An existing password can never be shown again once set (it's stored one-way hashed, same as everywhere else) — set a new one here and it'll be displayed once, right above, so you can hand it over. This signs the student out everywhere.</p>
                   <div class="flex flex-wrap items-end gap-3">
@@ -307,6 +308,7 @@ export class StudentDetailComponent implements OnInit {
   private examsService = inject(ExaminationService);
   private auth = inject(AuthService);
   private usersService = inject(UsersService);
+  private toast = inject(ToastService);
 
   student = signal<Student | null>(null);
   loading = signal(false);
@@ -563,11 +565,18 @@ export class StudentDetailComponent implements OnInit {
       address: f.address.trim() || undefined,
     }).subscribe({
       next: (updated) => {
-        this.savingEdit.set(false); this.editOk.set(true); this.editMsg.set('Details updated.');
+        // The panel closes on success, so surface confirmation as a toast (an
+        // inline message here would vanish with the form).
+        this.savingEdit.set(false); this.editOk.set(true); this.editMsg.set('');
         this.student.set(updated);
         this.showEditForm.set(false);
+        this.toast.success('Student details updated.');
       },
-      error: (err) => { this.savingEdit.set(false); this.editOk.set(false); this.editMsg.set(this.msg(err, 'Could not save details.')); },
+      error: (err) => {
+        this.savingEdit.set(false); this.editOk.set(false);
+        this.editMsg.set(this.msg(err, 'Could not save details.'));
+        this.toast.error('Could not save student details.');
+      },
     });
   }
 
@@ -586,6 +595,7 @@ export class StudentDetailComponent implements OnInit {
         this.justSetPassword.set(justSet); // shown in the credentials banner above -- this run only
         this.newPassword = '';
         this.showPasswordForm.set(false);
+        this.toast.success('Login password reset. New credentials shown above.');
       },
       error: (err) => { this.settingPassword.set(false); this.passwordOk.set(false); this.passwordMsg.set(this.msg(err, 'Could not update password.')); },
     });

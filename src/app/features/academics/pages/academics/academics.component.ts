@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AcademicsService, Subject, Homework } from '../../academics.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classNameById, sectionNameById } from '../../../../core/constants/classes';
 import { AuthService } from '../../../../core/auth/auth.service';
 
@@ -56,7 +57,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
               </div>
               <p *ngIf="s.syllabusOutline && editingSyllabus !== s.id" class="text-xs text-neutral-600 mt-1 whitespace-pre-line">{{ s.syllabusOutline }}</p>
               <p *ngIf="!s.syllabusOutline && editingSyllabus !== s.id" class="text-xs text-neutral-400 mt-1">No syllabus added yet.</p>
-              <div *ngIf="editingSyllabus === s.id" class="mt-2 space-y-2">
+              <div *ngIf="editingSyllabus === s.id" class="mt-2 space-y-2 reveal-panel">
                 <textarea [(ngModel)]="syllabusDraft" rows="4" placeholder="Chapters / topics / marking scheme..."
                   class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm"></textarea>
                 <button (click)="saveSyllabus(s)" class="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs font-medium">Save syllabus</button>
@@ -94,6 +95,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
 export class AcademicsComponent implements OnInit {
   private service = inject(AcademicsService);
   private auth = inject(AuthService);
+  private toast = inject(ToastService);
 
   selfService = this.auth.isSelfService();
   subjects = signal<Subject[]>([]);
@@ -141,14 +143,14 @@ export class AcademicsComponent implements OnInit {
     if (!this.subjectName_ || !this.subjectCode) { this.subjError.set('Name and code are required.'); return; }
     this.subjError.set('');
     this.service.createSubject({ name: this.subjectName_, code: this.subjectCode, classId: this.viewClassId }).subscribe({
-      next: () => { this.subjectName_ = ''; this.subjectCode = ''; this.loadSubjects(); },
+      next: () => { this.subjectName_ = ''; this.subjectCode = ''; this.loadSubjects(); this.toast.success('Subject added.'); },
       error: (err) => this.subjError.set(this.msg(err, 'Could not add subject.')),
     });
   }
 
   saveSyllabus(s: Subject): void {
     this.service.updateSyllabus(s.id, this.syllabusDraft || null).subscribe({
-      next: () => { this.editingSyllabus = null; this.loadSubjects(); },
+      next: () => { this.editingSyllabus = null; this.loadSubjects(); this.toast.success('Syllabus saved.'); },
       error: (err) => this.subjError.set(this.msg(err, 'Could not save syllabus.')),
     });
   }
@@ -162,7 +164,7 @@ export class AcademicsComponent implements OnInit {
       title: this.hw.title, subjectId: this.hw.subjectId, classId: this.viewClassId,
       sectionId: this.viewSectionId, dueDateUtc: `${this.hw.dueDate}T00:00:00Z`,
     }).subscribe({
-      next: () => { this.hw = { title: '', subjectId: '', dueDate: '' }; this.loadHomework(); },
+      next: () => { this.hw = { title: '', subjectId: '', dueDate: '' }; this.loadHomework(); this.toast.success('Homework assigned.'); },
       error: (err) => this.hwError.set(this.msg(err, 'Could not assign homework.')),
     });
   }
