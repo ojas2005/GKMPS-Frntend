@@ -19,6 +19,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Teachers',      route: '/teachers',      roles: STAFF },
   { label: 'Attendance',    route: '/attendance',    roles: [...STAFF, RoleNames.Teacher, ...SELF_SERVICE] },
   { label: 'Academics',     route: '/academics',     roles: [...STAFF, RoleNames.Teacher, ...SELF_SERVICE] },
+  { label: 'Timetable',     route: '/timetable',     roles: [...STAFF, RoleNames.Teacher, ...SELF_SERVICE] },
   { label: 'Examination',   route: '/examination',   roles: [...STAFF, RoleNames.Teacher, ...SELF_SERVICE] },
   { label: 'Fees',          route: '/fees',          roles: [...STAFF, RoleNames.Accountant, ...SELF_SERVICE] },
   // Composer, not a feed — students/parents get announcements via the bell icon instead.

@@ -51,6 +51,12 @@ export const routes: Routes = [
         loadChildren: () => import('./features/academics/academics.routes').then(m => m.ACADEMICS_ROUTES),
       },
       {
+        path: 'timetable',
+        canActivate: [roleGuard],
+        data: { roles: rolesFor('/timetable') },
+        loadChildren: () => import('./features/timetable/timetable.routes').then(m => m.TIMETABLE_ROUTES),
+      },
+      {
         path: 'examination',
         canActivate: [roleGuard],
         data: { roles: rolesFor('/examination') },
