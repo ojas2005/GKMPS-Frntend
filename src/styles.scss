@@ -347,6 +347,25 @@ textarea {
 }
 
 /* --------------------------------------------------------------------------
+   Select dropdowns
+   Drop the bulky native control for a clean custom chevron so every <select>
+   reads like the text inputs — one rule instead of per-template tweaks.
+   -------------------------------------------------------------------------- */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  /* Room for the chevron; !important beats the templates' px-* utilities. */
+  padding-right: 2.5rem !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1.05rem;
+
+  &::-ms-expand { display: none; }
+}
+
+/* --------------------------------------------------------------------------
    Topbar micro-interactions
    -------------------------------------------------------------------------- */
 
@@ -494,6 +513,14 @@ main {
   select option {
     background-color: #27272a;
     color: #f4f4f5;
+  }
+
+  /* Lighter chevron so it stays visible on the dark field. */
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23a1a1aa' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M6 9l6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.75rem center !important;
+    background-size: 1.05rem !important;
   }
 
   /* Nav / button fills already carry their own colors; keep hover text white. */
