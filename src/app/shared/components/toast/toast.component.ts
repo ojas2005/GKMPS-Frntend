@@ -38,7 +38,7 @@ import { ToastService } from '../../../core/services/toast.service';
           <path *ngIf="t.kind === 'info'" stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
 
-        <p class="flex-1 text-sm text-neutral-800 leading-snug">{{ t.text }}</p>
+        <p class="flex-1 text-sm text-neutral-900 leading-snug">{{ t.text }}</p>
 
         <button (click)="toast.dismiss(t.id)" type="button"
           class="flex-shrink-0 text-neutral-400 hover:text-neutral-700 -mt-0.5" aria-label="Dismiss">

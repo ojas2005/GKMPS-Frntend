@@ -127,6 +127,15 @@ export class FeesService {
     return this.api.post(`/api/fee-payments/students/${studentId}/submit`, body);
   }
 
+  // Creates an unpaid ad-hoc due (no payment, no receipt) -- e.g. a transport route's
+  // monthly fee added the moment a student is mapped to that route.
+  addAdHocDue(
+    studentId: string,
+    body: { classId: string; amount: number; periodLabel: string; description?: string },
+  ): Observable<FeePayment> {
+    return this.api.post(`/api/fee-payments/students/${studentId}/dues`, body);
+  }
+
   // Every receipt across a student's dues (scoped server-side to the caller).
   transactionsForStudent(studentId: string): Observable<PaymentTransactionSummary[]> {
     return this.api.get(`/api/fee-payments/students/${studentId}/transactions`);

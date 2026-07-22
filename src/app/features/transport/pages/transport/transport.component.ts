@@ -1,12 +1,13 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { TransportService, TransportRoute } from '../../transport.service';
 
 @Component({
   selector: 'app-transport',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="p-6 space-y-6">
       <div class="flex items-center justify-between">
@@ -56,7 +57,7 @@ import { TransportService, TransportRoute } from '../../transport.service';
             <tr><th class="px-6 py-3 font-medium">Route</th><th class="px-6 py-3 font-medium">From → To</th><th class="px-6 py-3 font-medium">Monthly fee</th></tr>
           </thead>
           <tbody>
-            <tr *ngFor="let r of rows()" class="border-t border-neutral-200">
+            <tr *ngFor="let r of rows()" [routerLink]="['/transport', r.id]" class="border-t border-neutral-200 cursor-pointer hover:bg-neutral-50">
               <td class="px-6 py-3 text-neutral-900">{{ r.name }}</td>
               <td class="px-6 py-3 text-neutral-600">{{ r.startPoint || '—' }} → {{ r.endPoint || '—' }}</td>
               <td class="px-6 py-3 text-neutral-600">{{ r.monthlyFee != null ? ('₹' + r.monthlyFee) : '—' }}</td>

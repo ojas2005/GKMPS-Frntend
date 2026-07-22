@@ -19,12 +19,26 @@ export interface Vehicle {
   [key: string]: unknown;
 }
 
+export interface StudentRouteMapping {
+  id: string;
+  studentId: string;
+  studentName: string;
+  admissionNumber?: string;
+  routeId: string;
+  pickupPoint: string;
+  [key: string]: unknown;
+}
+
 @Injectable({ providedIn: 'root' })
 export class TransportService {
   private api = inject(ApiService);
 
   listRoutes(): Observable<TransportRoute[]> {
     return this.api.get('/api/routes');
+  }
+
+  getRoute(id: string): Observable<TransportRoute> {
+    return this.api.get(`/api/routes/${id}`);
   }
 
   createRoute(body: {
@@ -44,10 +58,14 @@ export class TransportService {
     return this.api.post('/api/vehicles', body);
   }
 
+  getStudentsOnRoute(routeId: string): Observable<StudentRouteMapping[]> {
+    return this.api.get('/api/student-route-mappings', { routeId });
+  }
+
   mapStudentToRoute(body: {
     studentId: string;
     routeId: string;
-    stop?: string;
+    pickupPoint?: string;
   }): Observable<unknown> {
     return this.api.post('/api/student-route-mappings', body);
   }
