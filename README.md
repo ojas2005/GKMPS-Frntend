@@ -72,8 +72,10 @@ npm install
 npm run dev
 ```
 
-Then open **http://localhost:4200**, click **Create one** on the login page, and register
-a user (pick `SuperAdmin` for full access) to land on the dashboard.
+Then open **http://localhost:4200** and sign in — there's no public sign-up, only a
+school-office-issued login ID. For local development, use the backend's seeded owner
+account (see the [backend README](https://github.com/ojas2005/GKMPS-School-portal) for
+how that password is generated on first boot).
 
 ## Scripts
 
