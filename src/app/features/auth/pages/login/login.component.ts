@@ -10,19 +10,29 @@ import { AuthService } from '../../../../core/auth/auth.service';
   imports: [CommonModule, ReactiveFormsModule],
   template: `
     <div class="login-page min-h-screen relative overflow-hidden flex items-center justify-center px-4">
-      <!-- Animated gradient backdrop -->
-      <div class="bg-animated absolute inset-0"></div>
+      <!-- Deep gradient base -->
+      <div class="bg-base absolute inset-0" aria-hidden="true"></div>
 
-      <!-- Drifting glow orbs -->
-      <div class="orb orb-1"></div>
-      <div class="orb orb-2"></div>
-      <div class="orb orb-3"></div>
+      <!-- Aurora light bloom (screen-blended over the base) -->
+      <div class="bg-aurora absolute inset-0" aria-hidden="true">
+        <span class="aurora aurora-1"></span>
+        <span class="aurora aurora-2"></span>
+        <span class="aurora aurora-3"></span>
+        <span class="aurora aurora-4"></span>
+      </div>
+
+      <!-- Perspective grid, masked to fade out toward the edges -->
+      <div class="bg-grid absolute inset-0" aria-hidden="true"></div>
 
       <!-- Floating particles -->
       <div class="particles absolute inset-0" aria-hidden="true">
         <span></span><span></span><span></span><span></span><span></span>
         <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span>
       </div>
+
+      <!-- Vignette: darkens the corners so the card reads as the focal point -->
+      <div class="bg-vignette absolute inset-0" aria-hidden="true"></div>
 
       <div class="w-full max-w-md relative z-10">
         <!-- Card -->
@@ -126,58 +136,96 @@ import { AuthService } from '../../../../core/auth/auth.service';
   `,
   styles: [
     `
-      /* ---------- Animated background ---------- */
-      .bg-animated {
-        background: linear-gradient(-45deg, #0c3d66, #0369a1, #0ea5e9, #075985, #0c3d66);
-        background-size: 400% 400%;
-        animation: gradient-drift 18s ease infinite;
+      /* ---------- Deep gradient base ----------
+         Dark navy -> teal so the white card reads as the brightest thing on
+         screen; the slow drift keeps it alive without pulling focus. */
+      .bg-base {
+        background: linear-gradient(150deg, #020617 0%, #041f3d 28%, #075985 58%, #0b4a5c 82%, #041124 100%);
+        background-size: 200% 200%;
+        animation: base-drift 24s ease-in-out infinite;
+      }
+      @keyframes base-drift {
+        0%, 100% { background-position: 0% 50%; }
+        50%      { background-position: 100% 50%; }
       }
 
-      @keyframes gradient-drift {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-      }
-
-      /* ---------- Glow orbs ---------- */
-      .orb {
+      /* ---------- Aurora bloom ----------
+         Screen blending over the dark base makes overlapping blobs add light
+         instead of muddying, which is what sells the "aurora" look. */
+      .bg-aurora { pointer-events: none; }
+      .aurora {
         position: absolute;
+        display: block;
         border-radius: 9999px;
-        filter: blur(60px);
-        opacity: 0.55;
-        pointer-events: none;
+        filter: blur(90px);
+        mix-blend-mode: screen;
+        will-change: transform;
       }
-      .orb-1 {
-        width: 28rem; height: 28rem;
-        top: -8rem; left: -8rem;
-        background: radial-gradient(circle, #38bdf8, transparent 70%);
-        animation: orb-float-1 14s ease-in-out infinite;
+      .aurora-1 {
+        width: 40rem; height: 40rem;
+        top: -14rem; left: -10rem;
+        background: radial-gradient(circle, rgba(56, 189, 248, 0.75), transparent 68%);
+        animation: aurora-1 22s ease-in-out infinite;
       }
-      .orb-2 {
-        width: 24rem; height: 24rem;
-        bottom: -6rem; right: -6rem;
-        background: radial-gradient(circle, #7dd3fc, transparent 70%);
-        animation: orb-float-2 18s ease-in-out infinite;
+      .aurora-2 {
+        width: 34rem; height: 34rem;
+        bottom: -12rem; right: -8rem;
+        background: radial-gradient(circle, rgba(45, 212, 191, 0.6), transparent 68%);
+        animation: aurora-2 26s ease-in-out infinite;
       }
-      .orb-3 {
-        width: 16rem; height: 16rem;
-        top: 55%; left: 12%;
-        background: radial-gradient(circle, #bae6ff, transparent 70%);
-        animation: orb-float-3 11s ease-in-out infinite;
+      .aurora-3 {
+        width: 26rem; height: 26rem;
+        top: 8%; right: 14%;
+        background: radial-gradient(circle, rgba(129, 140, 248, 0.55), transparent 70%);
+        animation: aurora-3 19s ease-in-out infinite;
+      }
+      .aurora-4 {
+        width: 30rem; height: 30rem;
+        bottom: 4%; left: 10%;
+        background: radial-gradient(circle, rgba(14, 165, 233, 0.5), transparent 70%);
+        animation: aurora-4 30s ease-in-out infinite;
       }
 
-      @keyframes orb-float-1 {
+      @keyframes aurora-1 {
         0%, 100% { transform: translate(0, 0) scale(1); }
-        50% { transform: translate(4rem, 3rem) scale(1.15); }
+        50%      { transform: translate(7rem, 5rem) scale(1.18); }
       }
-      @keyframes orb-float-2 {
+      @keyframes aurora-2 {
         0%, 100% { transform: translate(0, 0) scale(1); }
-        50% { transform: translate(-4rem, -3rem) scale(1.1); }
+        50%      { transform: translate(-6rem, -4rem) scale(1.12); }
       }
-      @keyframes orb-float-3 {
+      @keyframes aurora-3 {
         0%, 100% { transform: translate(0, 0) scale(1); }
-        33% { transform: translate(3rem, -4rem) scale(1.2); }
-        66% { transform: translate(-2rem, 2rem) scale(0.95); }
+        33%      { transform: translate(-4rem, 5rem) scale(1.22); }
+        66%      { transform: translate(3rem, -3rem) scale(0.92); }
+      }
+      @keyframes aurora-4 {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        50%      { transform: translate(5rem, -6rem) scale(1.15); }
+      }
+
+      /* ---------- Grid ----------
+         Masked with a radial fade so the lines never reach the edges (a hard
+         cut-off is what makes overlay grids look cheap). */
+      .bg-grid {
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgba(186, 230, 253, 0.12) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(186, 230, 253, 0.12) 1px, transparent 1px);
+        background-size: 56px 56px;
+        -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, #000 25%, transparent 78%);
+        mask-image: radial-gradient(ellipse 75% 65% at 50% 45%, #000 25%, transparent 78%);
+        animation: grid-pan 40s linear infinite;
+      }
+      @keyframes grid-pan {
+        from { background-position: 0 0, 0 0; }
+        to   { background-position: 56px 56px, 56px 56px; }
+      }
+
+      /* ---------- Vignette ---------- */
+      .bg-vignette {
+        pointer-events: none;
+        background: radial-gradient(ellipse 80% 70% at 50% 45%, transparent 35%, rgba(2, 6, 23, 0.55) 100%);
       }
 
       /* ---------- Floating particles ---------- */
@@ -187,25 +235,29 @@ import { AuthService } from '../../../../core/auth/auth.service';
         bottom: -1rem;
         width: 6px; height: 6px;
         border-radius: 9999px;
-        background: rgba(255, 255, 255, 0.5);
+        background: rgba(224, 242, 254, 0.85);
+        box-shadow: 0 0 8px 1px rgba(125, 211, 252, 0.7);
         animation: particle-rise linear infinite;
       }
-      .particles span:nth-child(1)  { left: 8%;  animation-duration: 12s; animation-delay: 0s;   width: 5px; height: 5px; }
-      .particles span:nth-child(2)  { left: 18%; animation-duration: 16s; animation-delay: 2s;   width: 8px; height: 8px; }
-      .particles span:nth-child(3)  { left: 28%; animation-duration: 10s; animation-delay: 5s; }
-      .particles span:nth-child(4)  { left: 38%; animation-duration: 14s; animation-delay: 1s;   width: 4px; height: 4px; }
-      .particles span:nth-child(5)  { left: 50%; animation-duration: 18s; animation-delay: 7s;   width: 9px; height: 9px; }
-      .particles span:nth-child(6)  { left: 60%; animation-duration: 11s; animation-delay: 3s; }
-      .particles span:nth-child(7)  { left: 70%; animation-duration: 15s; animation-delay: 8s;   width: 5px; height: 5px; }
-      .particles span:nth-child(8)  { left: 80%; animation-duration: 13s; animation-delay: 4s;   width: 7px; height: 7px; }
-      .particles span:nth-child(9)  { left: 90%; animation-duration: 17s; animation-delay: 6s; }
-      .particles span:nth-child(10) { left: 45%; animation-duration: 12s; animation-delay: 9s;   width: 4px; height: 4px; }
+      .particles span:nth-child(1)  { left: 8%;  animation-duration: 15s; animation-delay: 0s;  width: 4px; height: 4px; }
+      .particles span:nth-child(2)  { left: 18%; animation-duration: 19s; animation-delay: 2s;  width: 6px; height: 6px; }
+      .particles span:nth-child(3)  { left: 26%; animation-duration: 13s; animation-delay: 5s;  width: 3px; height: 3px; }
+      .particles span:nth-child(4)  { left: 38%; animation-duration: 17s; animation-delay: 1s;  width: 5px; height: 5px; }
+      .particles span:nth-child(5)  { left: 47%; animation-duration: 21s; animation-delay: 7s;  width: 3px; height: 3px; }
+      .particles span:nth-child(6)  { left: 56%; animation-duration: 14s; animation-delay: 3s;  width: 6px; height: 6px; }
+      .particles span:nth-child(7)  { left: 64%; animation-duration: 18s; animation-delay: 8s;  width: 4px; height: 4px; }
+      .particles span:nth-child(8)  { left: 73%; animation-duration: 16s; animation-delay: 4s;  width: 5px; height: 5px; }
+      .particles span:nth-child(9)  { left: 82%; animation-duration: 20s; animation-delay: 6s;  width: 3px; height: 3px; }
+      .particles span:nth-child(10) { left: 91%; animation-duration: 15s; animation-delay: 9s;  width: 4px; height: 4px; }
+      .particles span:nth-child(11) { left: 33%; animation-duration: 23s; animation-delay: 11s; width: 3px; height: 3px; }
+      .particles span:nth-child(12) { left: 68%; animation-duration: 12s; animation-delay: 13s; width: 4px; height: 4px; }
 
       @keyframes particle-rise {
-        0%   { transform: translateY(0) scale(1); opacity: 0; }
-        10%  { opacity: 0.7; }
-        90%  { opacity: 0.7; }
-        100% { transform: translateY(-100vh) scale(0.4); opacity: 0; }
+        0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
+        10%  { opacity: 0.8; }
+        50%  { transform: translateY(-50vh) translateX(1.5rem) scale(0.8); }
+        90%  { opacity: 0.55; }
+        100% { transform: translateY(-100vh) translateX(-1rem) scale(0.35); opacity: 0; }
       }
 
       /* ---------- Card ---------- */
@@ -347,11 +399,13 @@ import { AuthService } from '../../../../core/auth/auth.service';
 
       /* ---------- Accessibility ---------- */
       @media (prefers-reduced-motion: reduce) {
-        .bg-animated, .orb, .particles span, .login-card, .stagger,
+        .bg-base, .aurora, .bg-grid, .particles span, .login-card, .stagger,
         .logo-badge, .login-card::before, .error-box, .submit-btn::after {
           animation: none !important;
         }
         .stagger, .login-card { opacity: 1; transform: none; }
+        /* Drifting specks with no motion are just noise -- drop them entirely. */
+        .particles { display: none; }
       }
     `,
   ],
