@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { environment } from '../../../environments/environment';
+import { apiBaseUrl } from '../config/runtime-config';
 import { ApiResponse } from '../models/api-response';
 
 /**
@@ -14,7 +14,7 @@ import { ApiResponse } from '../models/api-response';
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private http = inject(HttpClient);
-  private base = environment.apiBaseUrl;
+  private base = apiBaseUrl();
 
   private toParams(query?: Record<string, unknown>): HttpParams | undefined {
     if (!query) return undefined;
@@ -42,6 +42,12 @@ export class ApiService {
   put<T>(path: string, body?: unknown): Observable<T> {
     return this.http
       .put<ApiResponse<T>>(`${this.base}${path}`, body ?? {})
+      .pipe(map((r) => r.data as T));
+  }
+
+  delete<T>(path: string): Observable<T> {
+    return this.http
+      .delete<ApiResponse<T>>(`${this.base}${path}`)
       .pipe(map((r) => r.data as T));
   }
 

@@ -2,15 +2,9 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { environment } from '../../../environments/environment';
+import { apiBaseUrl } from '../config/runtime-config';
 import { ApiResponse } from '../models/api-response';
-import {
-  AuthResult,
-  CurrentUser,
-  LoginRequest,
-  RefreshRequest,
-  RegisterRequest,
-} from './auth.models';
+import { AuthResult, CurrentUser, LoginRequest, RefreshRequest } from './auth.models';
 
 const REFRESH_KEY = 'gkmps.refreshToken';
 const USER_KEY = 'gkmps.user';
@@ -23,7 +17,7 @@ const USER_KEY = 'gkmps.user';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private http = inject(HttpClient);
-  private base = environment.apiBaseUrl;
+  private base = apiBaseUrl();
 
   private accessToken = signal<string | null>(null);
   readonly currentUser = signal<CurrentUser | null>(this.readStoredUser());
@@ -84,23 +78,20 @@ export class AuthService {
       .pipe(map((r) => this.applyAuth(r.data!)));
   }
 
-  register(body: RegisterRequest): Observable<CurrentUser> {
+  // Changing your own password signs out every other session; this one gets fresh tokens.
+  changePassword(currentPassword: string, newPassword: string): Observable<CurrentUser> {
     return this.http
-      .post<ApiResponse<AuthResult>>(`${this.base}/api/auth/register`, body)
-      .pipe(map((r) => this.applyAuth(r.data!)));
-  }
-
-  loginWithGoogle(idToken: string): Observable<CurrentUser> {
-    return this.http
-      .post<ApiResponse<AuthResult>>(`${this.base}/api/auth/login/google`, { idToken })
+      .post<ApiResponse<AuthResult>>(`${this.base}/api/auth/change-password`, { currentPassword, newPassword })
       .pipe(map((r) => this.applyAuth(r.data!)));
   }
 
   // Called by the interceptor on a 401.
   refresh(): Observable<string> {
+    // After a page reload the in-memory access token is gone; the refresh token alone is
+    // enough for the backend, so only send the access token when we still have one.
     const body: RefreshRequest = {
-      accessToken: this.accessToken() ?? '',
       refreshToken: this.getRefreshToken() ?? '',
+      ...(this.accessToken() ? { accessToken: this.accessToken()! } : {}),
     };
     return this.http
       .post<ApiResponse<AuthResult>>(`${this.base}/api/auth/refresh`, body)
@@ -114,7 +105,7 @@ export class AuthService {
   logout(): void {
     const refreshToken = this.getRefreshToken();
     if (refreshToken) {
-      // Best-effort server-side revoke; ignore failures.
+      // Best-effort server-side revoke (needs only the refresh token); ignore failures.
       this.http
         .post(`${this.base}/api/auth/logout`, { refreshToken })
         .subscribe({ error: () => {} });

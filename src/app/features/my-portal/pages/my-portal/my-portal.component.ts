@@ -167,7 +167,7 @@ export class MyPortalComponent implements OnInit {
   }
 
   private msg(err: any, fb: string): string {
-    if (err?.status === 0) return 'Cannot reach the gateway on localhost:5100. Is the backend running?';
+    if (err?.status === 0) return 'Cannot reach the server. Check your connection and try again.';
     return err?.error?.errors?.[0] || err?.error?.message || fb;
   }
 }

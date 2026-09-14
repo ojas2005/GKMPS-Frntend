@@ -24,16 +24,8 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface RegisterRequest {
-  email: string;
-  username?: string;
-  password: string;
-  fullName: string;
-  role: RoleName;
-}
-
 export interface RefreshRequest {
-  accessToken: string;
+  accessToken?: string;
   refreshToken: string;
 }
 

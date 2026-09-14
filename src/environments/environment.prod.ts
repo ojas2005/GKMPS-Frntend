@@ -1,5 +1,6 @@
 export const environment = {
   production: true,
-  // Override at deploy time with the public gateway URL.
-  apiBaseUrl: 'http://localhost:5100',
+  // Build-time fallback only -- the deployed value comes from public/config.json at startup
+  // (see core/config/runtime-config.ts). Empty = same origin as the page.
+  apiBaseUrl: '',
 };
