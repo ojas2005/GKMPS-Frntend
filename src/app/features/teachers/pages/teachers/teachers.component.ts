@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { AuthService } from '../../../../core/auth/auth.service';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TeachersService, Staff, OnboardStaffForm } from '../../teachers.service';
@@ -53,10 +54,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
           <div>
             <label class="block text-xs text-neutral-500 mb-1">Login role *</label>
             <select [(ngModel)]="form.role" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
-              <option value="Teacher">Teacher</option>
-              <option value="Accountant">Accountant</option>
-              <option value="Librarian">Librarian</option>
-              <option value="Admin">Admin</option>
+              <option *ngFor="let r of roleOptions" [value]="r">{{ r }}</option>
             </select>
           </div>
           <div>
@@ -105,7 +103,6 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
             class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">
             {{ saving() ? 'Saving...' : 'Onboard' }}
           </button>
-          <button (click)="fillSample()" type="button" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Fill sample</button>
           <span *ngIf="formError()" class="text-error-600 text-sm">{{ formError() }}</span>
         </div>
       </div>
@@ -147,6 +144,16 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
   `,
 })
 export class TeachersComponent implements OnInit {
+  private authForRoles = inject(AuthService);
+
+  // Only roles below the signed-in user's own can be created (the API enforces the same
+  // rule): the owner can add Principals and Admins, a Principal can add Admins.
+  readonly roleOptions: string[] = [
+    'Teacher', 'Accountant', 'Librarian',
+    ...(this.authForRoles.hasRole('SuperAdmin', 'Principal') ? ['Admin'] : []),
+    ...(this.authForRoles.hasRole('SuperAdmin') ? ['Principal'] : []),
+  ];
+
   private service = inject(TeachersService);
   rows = signal<Staff[]>([]);
   loading = signal(false);
@@ -168,14 +175,6 @@ export class TeachersComponent implements OnInit {
   }
 
   form: OnboardStaffForm = this.blankForm();
-
-  fillSample(): void {
-    const suffix = Date.now().toString(36).slice(-4);
-    this.form = { fullName: 'Meera Nair', designation: 'Teacher', role: 'Teacher',
-      username: `meera${suffix}`, password: 'Teacher@123',
-      email: '', phone: '9876500011', employeeCode: '', subjectsTaughtCsv: 'Mathematics,Science',
-      classTeacherOfClassId: '', classTeacherOfSectionId: '', monthlySalary: 35000 };
-  }
 
   ngOnInit(): void { this.load(); }
 
@@ -207,7 +206,7 @@ export class TeachersComponent implements OnInit {
   }
 
   private msg(err: any, fb: string): string {
-    if (err?.status === 0) return 'Cannot reach the gateway on localhost:5100. Is the backend running?';
+    if (err?.status === 0) return 'Cannot reach the server. Check your connection and try again.';
     return err?.error?.errors?.[0] || err?.error?.message || fb;
   }
 }

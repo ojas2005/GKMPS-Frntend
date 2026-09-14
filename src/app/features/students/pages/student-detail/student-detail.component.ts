@@ -153,6 +153,49 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
               </div>
             </div>
           </div>
+
+          <!-- Parent login (Admin/Principal/SuperAdmin only) -->
+          <div *ngIf="canManageAccount()" class="mt-4 pt-4 border-t border-neutral-200">
+            <h3 class="text-sm font-semibold text-neutral-900 mb-1">Parent login</h3>
+            <ng-container *ngIf="s.parentUserId; else noParent">
+              <p class="text-sm text-neutral-700">
+                Login ID: <span class="font-mono">{{ parentLoginId() || '…' }}</span>
+                <span class="text-xs text-neutral-500"> — the parent sees this student's attendance, results and fees.</span>
+              </p>
+              <div *ngIf="parentCredentials() as pc" class="mt-3 bg-success-50 border border-success-500 rounded-xl p-3 text-sm text-success-800">
+                Hand these to the parent — Login ID: <span class="font-mono font-bold">{{ pc.username }}</span>
+                &nbsp;·&nbsp; Password: <span class="font-mono font-bold">{{ pc.password }}</span>
+              </div>
+              <div class="mt-2 flex flex-wrap items-end gap-3">
+                <div>
+                  <label class="block text-xs text-neutral-500 mb-1">New parent password</label>
+                  <input [(ngModel)]="parentNewPassword" type="text" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                </div>
+                <button (click)="resetParentPassword(s)" [disabled]="parentBusy()"
+                  class="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50 disabled:text-neutral-400">Reset password</button>
+                <button (click)="unlinkParent(s)" [disabled]="parentBusy()"
+                  class="px-4 py-2 text-error-600 hover:text-error-700 text-sm disabled:text-neutral-400">Unlink</button>
+              </div>
+            </ng-container>
+            <ng-template #noParent>
+              <p class="text-xs text-neutral-500 mb-2">No parent login yet. Create one so the parent can follow attendance, results and fees.</p>
+              <div class="flex flex-wrap items-end gap-3">
+                <div>
+                  <label class="block text-xs text-neutral-500 mb-1">Parent login ID *</label>
+                  <input [(ngModel)]="parentForm.username" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs text-neutral-500 mb-1">Password (min 8 chars) *</label>
+                  <input [(ngModel)]="parentForm.password" type="text" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                </div>
+                <button (click)="createParentLogin(s)" [disabled]="parentBusy()"
+                  class="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">
+                  {{ parentBusy() ? 'Saving...' : 'Create parent login' }}
+                </button>
+              </div>
+            </ng-template>
+            <p *ngIf="parentMsg()" class="mt-2 text-sm text-error-600">{{ parentMsg() }}</p>
+          </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -354,6 +397,13 @@ export class StudentDetailComponent implements OnInit {
   loginId = signal<string | null>(null);
   justSetPassword = signal<string | null>(null);
 
+  parentLoginId = signal<string | null>(null);
+  parentCredentials = signal<{ username: string; password: string } | null>(null);
+  parentForm = { username: '', password: '' };
+  parentNewPassword = '';
+  parentBusy = signal(false);
+  parentMsg = signal('');
+
   showPasswordForm = signal(false);
   newPassword = '';
   settingPassword = signal(false);
@@ -406,6 +456,7 @@ export class StudentDetailComponent implements OnInit {
             error: () => {},
           });
         }
+        this.loadParentLogin(s);
       },
       error: (err) => { this.error.set(this.msg(err, 'Failed to load the student.')); this.loading.set(false); },
     });
@@ -601,6 +652,64 @@ export class StudentDetailComponent implements OnInit {
     });
   }
 
+  private loadParentLogin(s: Student): void {
+    this.parentLoginId.set(null);
+    if (!s.parentUserId || !this.canManageAccount()) return;
+    this.usersService.get(s.parentUserId).subscribe({
+      next: (u) => this.parentLoginId.set((u['username'] as string) || u.email),
+      error: () => this.parentLoginId.set('(account not found)'),
+    });
+  }
+
+  createParentLogin(s: Student): void {
+    const username = this.parentForm.username.trim();
+    const password = this.parentForm.password;
+    if (!username || password.length < 8) {
+      this.parentMsg.set('Enter a login ID and a password of at least 8 characters.'); return;
+    }
+    this.parentBusy.set(true); this.parentMsg.set('');
+    this.studentsService.createParentLogin(s, username, password).subscribe({
+      next: (updated) => {
+        this.parentBusy.set(false);
+        this.student.set({ ...s, parentUserId: updated.parentUserId });
+        this.parentCredentials.set({ username, password });
+        this.parentForm = { username: '', password: '' };
+        this.loadParentLogin({ ...s, parentUserId: updated.parentUserId });
+        this.toast.success('Parent login created.');
+      },
+      error: (err) => { this.parentBusy.set(false); this.parentMsg.set(this.msg(err, 'Could not create the parent login.')); },
+    });
+  }
+
+  resetParentPassword(s: Student): void {
+    if (!s.parentUserId) return;
+    const password = this.parentNewPassword;
+    if (password.length < 8) { this.parentMsg.set('Password must be at least 8 characters.'); return; }
+    this.parentBusy.set(true); this.parentMsg.set('');
+    this.usersService.setPassword(s.parentUserId, password).subscribe({
+      next: () => {
+        this.parentBusy.set(false);
+        this.parentCredentials.set({ username: this.parentLoginId() ?? '', password });
+        this.parentNewPassword = '';
+        this.toast.success('Parent password reset.');
+      },
+      error: (err) => { this.parentBusy.set(false); this.parentMsg.set(this.msg(err, 'Could not reset the parent password.')); },
+    });
+  }
+
+  unlinkParent(s: Student): void {
+    this.parentBusy.set(true); this.parentMsg.set('');
+    this.studentsService.linkParent(s.id, null).subscribe({
+      next: () => {
+        this.parentBusy.set(false);
+        this.student.set({ ...s, parentUserId: null });
+        this.parentCredentials.set(null);
+        this.toast.success('Parent login unlinked. Deactivate the account from Settings if it is no longer needed.');
+      },
+      error: (err) => { this.parentBusy.set(false); this.parentMsg.set(this.msg(err, 'Could not unlink the parent login.')); },
+    });
+  }
+
   downloadReceipt(transactionId: string): void {
     this.feesService.receipt(transactionId).subscribe({
       next: (link) => { if (link?.downloadUrl) window.open(link.downloadUrl, '_blank'); },
@@ -609,7 +718,7 @@ export class StudentDetailComponent implements OnInit {
   }
 
   private msg(err: any, fb: string): string {
-    if (err?.status === 0) return 'Cannot reach the gateway on localhost:5100. Is the backend running?';
+    if (err?.status === 0) return 'Cannot reach the server. Check your connection and try again.';
     return err?.error?.errors?.[0] || err?.error?.message || fb;
   }
 }
