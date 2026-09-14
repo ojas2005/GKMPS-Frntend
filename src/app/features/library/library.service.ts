@@ -1,7 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from '../../core/http/api.service';
-import { PagedResult } from '../../core/models/api-response';
 
 export interface Book {
   id: string;
@@ -14,6 +13,18 @@ export interface Book {
   [key: string]: unknown;
 }
 
+export interface BookIssue {
+  id: string;
+  bookId: string;
+  bookTitle: string;
+  studentId: string;
+  issuedAtUtc: string;
+  dueDateUtc: string;
+  returnedAtUtc?: string | null;
+  fineAmount: number;
+  isOverdue: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class LibraryService {
   private api = inject(ApiService);
@@ -23,8 +34,9 @@ export class LibraryService {
     category?: string;
     page?: number;
     pageSize?: number;
-  } = {}): Observable<PagedResult<Book>> {
-    return this.api.get('/api/books', { page: 1, pageSize: 20, ...query });
+  } = {}): Observable<Book[]> {
+    // The catalogue endpoint returns a plain array (not a PagedResult).
+    return this.api.get('/api/books', { page: 1, pageSize: 100, ...query });
   }
 
   createBook(body: {
@@ -37,15 +49,15 @@ export class LibraryService {
     return this.api.post('/api/books', body);
   }
 
-  issueBook(body: {
-    bookId: string;
-    studentId: string;
-    dueDateUtc?: string;
-  }): Observable<unknown> {
+  listIssues(activeOnly = true): Observable<BookIssue[]> {
+    return this.api.get('/api/book-issues', { activeOnly });
+  }
+
+  issueBook(body: { bookId: string; studentId: string; dueDateUtc: string }): Observable<BookIssue> {
     return this.api.post('/api/book-issues', body);
   }
 
-  returnBook(body: { bookIssueId: string }): Observable<unknown> {
-    return this.api.post('/api/book-issues/return', body);
+  returnBook(issueId: string): Observable<{ fineAmount: number }> {
+    return this.api.post('/api/book-issues/return', { issueId });
   }
 }
