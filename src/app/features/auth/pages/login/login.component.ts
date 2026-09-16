@@ -454,7 +454,7 @@ export class LoginComponent {
           err?.error?.errors?.[0] ||
           err?.error?.message ||
           (err?.status === 0
-            ? 'Cannot reach the server. Is the backend gateway running on localhost:5100?'
+            ? 'Cannot reach the server. Check your connection and try again.'
             : 'Invalid login ID or password.');
         this.errorMessage.set(msg);
       },

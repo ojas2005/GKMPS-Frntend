@@ -36,7 +36,7 @@ interface SearchPendingRow {
       </div>
 
       <!-- Self-service: pending summary + my fee ledger -->
-      <div *ngIf="selfService" class="rounded-xl p-6 shadow-sm border"
+      <div *ngIf="selfService && !loading() && !error()" class="rounded-xl p-6 shadow-sm border"
         [class]="pendingTotal() > 0 ? 'bg-error-50 border-error-200' : 'bg-success-50 border-success-200'">
         <p class="text-sm" [class]="pendingTotal() > 0 ? 'text-error-700' : 'text-success-700'">
           {{ pendingTotal() > 0 ? 'Amount to pay' : 'Fee status' }}
@@ -58,7 +58,7 @@ interface SearchPendingRow {
           <tbody>
             <tr *ngFor="let f of myFees()" class="border-t border-neutral-200">
               <td class="px-6 py-3 text-neutral-900">{{ f.feeStructureName || f.description || 'Fee' }}</td>
-              <td class="px-6 py-3 text-neutral-600">₹{{ f['totalAmount'] ?? f['amount'] ?? 0 }}</td>
+              <td class="px-6 py-3 text-neutral-600">₹{{ f['totalAmount'] ?? f.amount }}</td>
               <td class="px-6 py-3 text-neutral-600">₹{{ f['paidAmount'] ?? 0 }}</td>
               <td class="px-6 py-3 text-neutral-600">₹{{ f['waiverAmount'] ?? 0 }}</td>
               <td class="px-6 py-3 font-medium" [class]="pending(f) > 0 ? 'text-error-600' : 'text-success-600'">₹{{ pending(f) }}</td>
@@ -194,7 +194,6 @@ interface SearchPendingRow {
           <button (click)="save()" [disabled]="saving()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">
             {{ saving() ? 'Saving...' : 'Create' }}
           </button>
-          <button (click)="fillSample()" type="button" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Fill sample</button>
           <span *ngIf="formError()" class="text-error-600 text-sm">{{ formError() }}</span>
         </div>
       </div>
@@ -264,11 +263,6 @@ export class FeesComponent implements OnInit {
   searched = signal(false);
   searchError = signal('');
   searchResults = signal<SearchPendingRow[]>([]);
-
-  fillSample(): void {
-    this.form = { name: 'Tuition Term 1', classId: DEFAULT_CLASS.id,
-      academicYear: '2026-27', amount: 25000, dueDate: '2026-08-31' };
-  }
 
   pending(f: FeePayment): number {
     const total = Number(f['totalAmount'] ?? f['amount'] ?? 0);
@@ -390,7 +384,7 @@ export class FeesComponent implements OnInit {
   }
 
   private msg(err: any, fb: string): string {
-    if (err?.status === 0) return 'Cannot reach the gateway on localhost:5100. Is the backend running?';
+    if (err?.status === 0) return 'Cannot reach the server. Check your connection and try again.';
     return err?.error?.errors?.[0] || err?.error?.message || fb;
   }
 }

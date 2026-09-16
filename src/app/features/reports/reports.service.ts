@@ -4,7 +4,9 @@ import { ApiService } from '../../core/http/api.service';
 
 export interface EnrollmentReport {
   totalStudents?: number;
-  byClass?: Array<{ classId: string; className?: string; count: number }>;
+  // Active students per class id.
+  activeCountByClass?: Record<string, number>;
+  generatedAtUtc?: string;
   [key: string]: unknown;
 }
 

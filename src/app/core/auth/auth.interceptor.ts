@@ -18,7 +18,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  const isAuthCall = req.url.includes('/api/auth/');
+  // Only the token endpoints themselves skip refresh-and-retry. Other /api/auth calls
+  // (register, change-password) are ordinary authenticated requests and must recover
+  // from an expired token like anything else.
+  const isAuthCall = /\/api\/auth\/(login|refresh|logout)$/.test(req.url.split('?')[0]);
 
   const withToken = (token: string | null) =>
     token

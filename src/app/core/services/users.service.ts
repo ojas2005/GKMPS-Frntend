@@ -9,6 +9,8 @@ export interface UserSummary {
   fullName: string;
   role: string;
   isActive: boolean;
+  username?: string | null;
+  lastLoginAtUtc?: string | null;
   [key: string]: unknown;
 }
 
@@ -37,5 +39,11 @@ export class UsersService {
   // "view" equivalent, only setting a new one (which the admin then hands to the person).
   setPassword(id: string, newPassword: string): Observable<unknown> {
     return this.api.patch(`/api/users/${id}/password`, { newPassword });
+  }
+
+  // Removes a login that has never been used -- only for rolling back an onboarding whose
+  // second step (creating the student/staff profile) failed.
+  deleteUnused(id: string): Observable<unknown> {
+    return this.api.delete(`/api/users/${id}`);
   }
 }

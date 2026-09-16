@@ -61,8 +61,10 @@ by a single source of truth in `src/app/core/constants/nav.ts`.
 
 ## Getting started
 
-This app expects the GKMPS backend gateway to be running at `http://localhost:5100`
-(see [`INTEGRATION.md`](./INTEGRATION.md) for the full backend setup).
+In development this app expects the GKMPS backend gateway at `http://localhost:5100`
+(`ng serve` proxies `/api` to it; see [`INTEGRATION.md`](./INTEGRATION.md)). In production
+the API address comes from `public/config.json` (`apiBaseUrl`, empty = same origin), so one
+build works against any deployment.
 
 ```bash
 # install dependencies
@@ -75,7 +77,7 @@ npm run dev
 Then open **http://localhost:4200** and sign in — there's no public sign-up, only a
 school-office-issued login ID. For local development, use the backend's seeded owner
 account (see the [backend README](https://github.com/ojas2005/GKMPS-School-portal) for
-how that password is generated on first boot).
+how that password is generated on first boot) and change it under **My account**.
 
 ## Scripts
 

@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ReportsService, EnrollmentReport } from '../../reports.service';
+import { SCHOOL_CLASSES, classNameById } from '../../../../core/constants/classes';
 
 @Component({
   selector: 'app-reports',
@@ -24,11 +25,11 @@ import { ReportsService, EnrollmentReport } from '../../reports.service';
         <div *ngIf="error()" class="text-error-600 text-sm">{{ error() }}</div>
         <div *ngIf="enrollment() as e" class="space-y-3">
           <p class="text-3xl font-bold text-neutral-900">{{ e.totalStudents ?? 0 }} <span class="text-sm font-normal text-neutral-500">students</span></p>
-          <table *ngIf="e.byClass?.length" class="w-full text-sm">
-            <thead class="text-neutral-600 text-left"><tr><th class="py-2 font-medium">Class</th><th class="py-2 font-medium">Count</th></tr></thead>
+          <table *ngIf="byClass(e).length" class="w-full text-sm">
+            <thead class="text-neutral-600 text-left"><tr><th class="py-2 font-medium">Class</th><th class="py-2 font-medium">Active students</th></tr></thead>
             <tbody>
-              <tr *ngFor="let c of e.byClass" class="border-t border-neutral-200">
-                <td class="py-2 text-neutral-900">{{ c.className || c.classId }}</td>
+              <tr *ngFor="let c of byClass(e)" class="border-t border-neutral-200">
+                <td class="py-2 text-neutral-900">{{ c.name }}</td>
                 <td class="py-2 text-neutral-600">{{ c.count }}</td>
               </tr>
             </tbody>
@@ -50,6 +51,14 @@ import { ReportsService, EnrollmentReport } from '../../reports.service';
   `,
 })
 export class ReportsComponent implements OnInit {
+  // activeCountByClass is keyed by class id; show it in the school's own class order.
+  byClass(e: EnrollmentReport): Array<{ name: string; count: number }> {
+    const order = (id: string) => { const i = SCHOOL_CLASSES.findIndex((c) => c.id === id); return i < 0 ? 999 : i; };
+    return Object.entries(e.activeCountByClass ?? {})
+      .sort(([a], [b]) => order(a) - order(b))
+      .map(([id, count]) => ({ name: classNameById(id), count }));
+  }
+
   private service = inject(ReportsService);
   enrollment = signal<EnrollmentReport | null>(null);
   loading = signal(false);
@@ -88,7 +97,7 @@ export class ReportsComponent implements OnInit {
   }
 
   private msg(err: any, fb: string): string {
-    if (err?.status === 0) return 'Cannot reach the gateway on localhost:5100. Is the backend running?';
+    if (err?.status === 0) return 'Cannot reach the server. Check your connection and try again.';
     return err?.error?.errors?.[0] || err?.error?.message || fb;
   }
 }

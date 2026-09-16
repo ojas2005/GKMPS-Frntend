@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
-import { switchMap, map } from 'rxjs/operators';
+import { Observable, of, throwError } from 'rxjs';
+import { switchMap, map, catchError } from 'rxjs/operators';
+import { UsersService } from '../../core/services/users.service';
 import { ApiService } from '../../core/http/api.service';
 import { PagedResult } from '../../core/models/api-response';
 
@@ -81,6 +82,7 @@ export interface StaffQuery {
 @Injectable({ providedIn: 'root' })
 export class TeachersService {
   private api = inject(ApiService);
+  private users = inject(UsersService);
 
   list(query: StaffQuery = {}): Observable<PagedResult<Staff>> {
     return this.api.get('/api/staff', { page: 1, pageSize: 20, ...query });
@@ -97,6 +99,8 @@ export class TeachersService {
 
   // Onboarding needs a linked user account. Registers it with the owner-chosen login
   // ID + password (admin-only endpoint; tokens discarded), then posts the staff record.
+  // If the staff record can't be created, the new login is deleted again so the same
+  // login ID can be retried.
   onboardWithAccount(form: OnboardStaffForm): Observable<OnboardedStaff> {
     const suffix = Date.now().toString(36);
     const username = form.username.trim();
@@ -122,7 +126,11 @@ export class TeachersService {
             classTeacherOfClassId: form.classTeacherOfClassId || undefined,
             classTeacherOfSectionId: form.classTeacherOfSectionId || undefined,
             monthlySalary: form.monthlySalary || undefined,
-          }),
+          }).pipe(
+            catchError((err) =>
+              this.users.deleteUnused(res.userId).pipe(catchError(() => of(null)), switchMap(() => throwError(() => err))),
+            ),
+          ),
         ),
         map((staff) => ({ staff, credentials: { username, password: form.password } })),
       );

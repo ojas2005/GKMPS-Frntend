@@ -1,6 +1,6 @@
 import { Component, OnInit, Output, EventEmitter, signal, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ThemeService } from '../../services/theme.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { CommunicationService, Announcement } from '../../../features/communication/communication.service';
@@ -19,7 +19,7 @@ import {
 @Component({
   selector: 'app-topbar',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   template: `
     <div class="h-16 bg-white border-b border-neutral-200 flex items-center justify-between px-6 shadow-sm">
       <!-- Left Section -->
@@ -109,13 +109,18 @@ import {
             *ngIf="showUserMenu()"
             class="absolute top-16 right-6 bg-white rounded-lg shadow-lg border border-neutral-200 w-48 py-2 z-50"
           >
-            <button class="w-full px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2">
+            <a routerLink="/account" (click)="showUserMenu.set(false)" class="w-full px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+              </svg>
+              Change password
+            </a>
+            <a *ngIf="canOpenSettings()" routerLink="/settings" (click)="showUserMenu.set(false)" class="w-full px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
               </svg>
-              Settings
-            </button>
+              Users &amp; access
+            </a>
             <button (click)="logout()" class="w-full px-4 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50 flex items-center gap-2">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
@@ -161,10 +166,9 @@ export class TopbarComponent implements OnInit {
 
   loadAnnouncements(): void {
     const role = this.auth.currentUser()?.role;
-    // Self-service roles are scoped to their own class too; staff/teacher see
-    // everything relevant to their role across all classes.
-    const classId = this.auth.isSelfService() ? (this.auth.classId() ?? undefined) : undefined;
-    this.communication.listAnnouncements({ role, classId, pageSize: 10 }).subscribe({
+    // The server scopes non-admin callers to their own role/class from the token; admins
+    // see the announcements addressed to their role.
+    this.communication.listAnnouncements({ role, pageSize: 10 }).subscribe({
       next: (list) => this.announcements.set(list ?? []),
       error: () => {},
     });
@@ -174,6 +178,10 @@ export class TopbarComponent implements OnInit {
     this.showAnnouncements.update((v) => !v);
     this.showUserMenu.set(false);
     if (this.showAnnouncements()) this.loadAnnouncements();
+  }
+
+  canOpenSettings(): boolean {
+    return this.auth.hasRole('SuperAdmin', 'Principal', 'Admin');
   }
 
   toggleTheme(): void {

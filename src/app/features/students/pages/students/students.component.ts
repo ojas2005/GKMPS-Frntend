@@ -2,7 +2,8 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { StudentsService, Student, AdmitStudentForm } from '../../students.service';
+import { StudentsService, Student, AdmitStudentForm, Credentials } from '../../students.service';
+import { AuthService } from '../../../../core/auth/auth.service';
 import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classNameById, sectionNameById } from '../../../../core/constants/classes';
 
 @Component({
@@ -16,7 +17,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classN
           <h1 class="text-2xl font-bold text-neutral-900">Students</h1>
           <p class="text-neutral-600 text-sm">Search by name or admission number, click a row for full details &amp; analytics.</p>
         </div>
-        <button (click)="showForm.set(!showForm())"
+        <button *ngIf="canAdmit" (click)="showForm.set(!showForm())"
           class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium">
           {{ showForm() ? 'Close' : '+ Admit Student' }}
         </button>
@@ -28,6 +29,8 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classN
           <p class="font-semibold mb-1">Student admitted — hand these credentials to them:</p>
           <p>Login ID: <span class="font-mono font-bold">{{ lastCredentials()!.username }}</span>
              &nbsp;·&nbsp; Password: <span class="font-mono font-bold">{{ lastCredentials()!.password }}</span></p>
+          <p *ngIf="lastCredentials()!.parent as p" class="mt-1">Parent login ID: <span class="font-mono font-bold">{{ p.username }}</span>
+             &nbsp;·&nbsp; Password: <span class="font-mono font-bold">{{ p.password }}</span></p>
           <p class="text-xs mt-1 text-success-700">They sign in at this site with these — no registration needed.</p>
         </div>
         <button (click)="lastCredentials.set(null)" class="text-success-700 hover:text-success-900 text-sm">✕</button>
@@ -94,6 +97,22 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classN
             <input [(ngModel)]="form.parentPhone" placeholder="Optional" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
+            <label class="block text-xs text-neutral-500 mb-1">Parent email</label>
+            <input [(ngModel)]="form.parentEmail" type="email" placeholder="Optional — admission confirmation is sent here" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+          </div>
+          <div class="md:col-span-2 border-t border-neutral-200 pt-4">
+            <p class="text-sm font-medium text-neutral-900">Parent login <span class="font-normal text-neutral-500">(optional)</span></p>
+            <p class="text-xs text-neutral-500">Lets the parent see this student's attendance, results and fees. Leave blank to skip; you can add it later from the student's page.</p>
+          </div>
+          <div>
+            <label class="block text-xs text-neutral-500 mb-1">Parent login ID</label>
+            <input [(ngModel)]="form.parentUsername" placeholder="e.g. aarav2026.parent" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+          </div>
+          <div>
+            <label class="block text-xs text-neutral-500 mb-1">Parent password (min 8 characters)</label>
+            <input [(ngModel)]="form.parentPassword" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+          </div>
+          <div>
             <label class="block text-xs text-neutral-500 mb-1">Pending fee at admission (₹)</label>
             <input [(ngModel)]="form.pendingFee" type="number" min="0" placeholder="0 if none" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
             <p class="text-xs text-neutral-400 mt-1">Added on top of the class's fee structure. Their upcoming class fees are assessed automatically.</p>
@@ -104,7 +123,6 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classN
             class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">
             {{ saving() ? 'Saving...' : 'Admit' }}
           </button>
-          <button (click)="fillSample()" type="button" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Fill sample</button>
           <span *ngIf="formError()" class="text-error-600 text-sm">{{ formError() }}</span>
         </div>
       </div>
@@ -116,7 +134,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classN
         </div>
         <div *ngIf="error()" class="p-8 text-center text-error-600">{{ error() }}</div>
         <div *ngIf="!loading() && !error() && students().length === 0" class="p-8 text-center text-neutral-500">
-          No students found. Admit one to get started.
+          {{ canAdmit ? 'No students found. Admit one to get started.' : 'No students found.' }}
         </div>
         <table *ngIf="!loading() && !error() && students().length > 0" class="w-full text-sm">
           <thead class="bg-neutral-50 text-neutral-600 text-left">
@@ -135,7 +153,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classN
               <td class="px-6 py-3 font-medium text-neutral-900">{{ s.fullName }}</td>
               <td class="px-6 py-3 text-neutral-600">{{ className(s.classId) }}{{ s.sectionId ? ' - ' + sectionName(s.sectionId) : '' }}</td>
               <td class="px-6 py-3 text-neutral-600">{{ s.admissionNumber || '—' }}</td>
-              <td class="px-6 py-3 text-neutral-600">{{ s.guardianName || '—' }}</td>
+              <td class="px-6 py-3 text-neutral-600">{{ s.parentName || '—' }}</td>
               <td class="px-6 py-3 text-neutral-600">{{ s.status || 'Active' }}</td>
               <td class="px-6 py-3 text-primary-600 text-right text-xs font-medium">View details →</td>
             </tr>
@@ -147,6 +165,10 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classN
 })
 export class StudentsComponent implements OnInit {
   private service = inject(StudentsService);
+  private auth = inject(AuthService);
+
+  // Admission is an office action (the API rejects teachers).
+  readonly canAdmit = this.auth.hasRole('SuperAdmin', 'Principal', 'Admin');
 
   students = signal<Student[]>([]);
   loading = signal(false);
@@ -154,7 +176,7 @@ export class StudentsComponent implements OnInit {
   saving = signal(false);
   formError = signal('');
   showForm = signal(false);
-  lastCredentials = signal<{ username: string; password: string } | null>(null);
+  lastCredentials = signal<(Credentials & { parent?: Credentials }) | null>(null);
   keyword = '';
 
   classes = SCHOOL_CLASSES;
@@ -164,28 +186,11 @@ export class StudentsComponent implements OnInit {
 
   private blankForm(): AdmitStudentForm {
     return { fullName: '', dateOfBirth: '', gender: 'Male', classId: DEFAULT_CLASS.id, sectionId: DEFAULT_SECTION.id,
-      username: '', password: '', admissionNumber: '', email: '', parentName: '', parentPhone: '', pendingFee: 0 };
+      username: '', password: '', admissionNumber: '', email: '', parentName: '', parentEmail: '', parentPhone: '',
+      parentUsername: '', parentPassword: '', pendingFee: 0 };
   }
 
   form: AdmitStudentForm = this.blankForm();
-
-  fillSample(): void {
-    const suffix = Date.now().toString(36).slice(-4);
-    this.form = {
-      fullName: 'Aarav Sharma',
-      dateOfBirth: '2012-05-14',
-      gender: 'Male',
-      classId: DEFAULT_CLASS.id,
-      sectionId: DEFAULT_SECTION.id,
-      username: `aarav${suffix}`,
-      password: 'Student@123',
-      admissionNumber: '',
-      email: '',
-      parentName: 'Rohit Sharma',
-      parentPhone: '9988776655',
-      pendingFee: 0,
-    };
-  }
 
   ngOnInit(): void {
     this.load();
@@ -215,13 +220,17 @@ export class StudentsComponent implements OnInit {
       this.formError.set('A login ID and a password of at least 8 characters are required.');
       return;
     }
+    if (this.form.parentUsername?.trim() && (this.form.parentPassword ?? '').length < 8) {
+      this.formError.set('The parent login needs a password of at least 8 characters.');
+      return;
+    }
     this.saving.set(true);
     this.formError.set('');
     this.service.admitWithAccount(this.form).subscribe({
       next: (res) => {
         this.saving.set(false);
         this.showForm.set(false);
-        this.lastCredentials.set(res.credentials);
+        this.lastCredentials.set({ ...res.credentials, parent: res.parentCredentials });
         this.form = this.blankForm();
         this.load();
       },
@@ -233,7 +242,7 @@ export class StudentsComponent implements OnInit {
   }
 
   private msg(err: any, fallback: string): string {
-    if (err?.status === 0) return 'Cannot reach the gateway on localhost:5100. Is the backend running?';
+    if (err?.status === 0) return 'Cannot reach the server. Check your connection and try again.';
     return err?.error?.errors?.[0] || err?.error?.message || fallback;
   }
 }

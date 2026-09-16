@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Observable, forkJoin, of, throwError } from 'rxjs';
 import { switchMap, map, catchError } from 'rxjs/operators';
+import { UsersService } from '../../core/services/users.service';
 import { ApiService } from '../../core/http/api.service';
 import { DownloadLink, PagedResult } from '../../core/models/api-response';
 import { FeesService } from '../fees/fees.service';
@@ -23,6 +24,7 @@ export interface Student {
   parentPhone?: string;
   address?: string;
   status?: string;
+  parentUserId?: string | null;
   [key: string]: unknown;
 }
 
@@ -57,13 +59,23 @@ export interface AdmitStudentForm {
   admissionNumber?: string; // auto-generated if blank
   email?: string; // optional; synthesized from the login ID if blank
   parentName?: string;
+  parentEmail?: string;
   parentPhone?: string;
+  // Optional Parent login -- lets the guardian see this student's attendance, results and fees.
+  parentUsername?: string;
+  parentPassword?: string;
   pendingFee?: number; // fee already pending/owed at admission, e.g. from a previous school
+}
+
+export interface Credentials {
+  username: string;
+  password: string;
 }
 
 export interface AdmittedStudent {
   student: Student;
-  credentials: { username: string; password: string };
+  credentials: Credentials;
+  parentCredentials?: Credentials;
 }
 
 export interface StudentQuery {
@@ -78,6 +90,7 @@ export interface StudentQuery {
 export class StudentsService {
   private api = inject(ApiService);
   private fees = inject(FeesService);
+  private users = inject(UsersService);
 
   list(query: StudentQuery = {}): Observable<PagedResult<Student>> {
     return this.api.get('/api/students', { page: 1, pageSize: 20, ...query });
@@ -87,29 +100,42 @@ export class StudentsService {
     return this.api.get(`/api/students/${id}`);
   }
 
-  // Admitting a student needs a linked user account. Registration is admin-only on the
-  // backend, so this runs under the owner's session: it registers the account with the
-  // owner-chosen login ID + password (tokens in the response are discarded), posts the
-  // student with the returned userId, then assesses their fee dues for the class (plus
-  // an opening balance if the owner entered a pending amount). Fee assessment is
-  // best-effort — a Fee.API hiccup doesn't undo the admission, it's just retried the
-  // next time dues are viewed/assessed for this student.
+  // Admitting a student needs a linked user account (and optionally a Parent login).
+  // Registration is admin-only on the backend, so this runs under the owner's session: it
+  // registers the account(s) with the owner-chosen login IDs + passwords (tokens in the
+  // responses are discarded), posts the student with the returned user ids, then assesses
+  // their fee dues. If creating the student record fails, the just-created logins are
+  // deleted again so a retry with the same login IDs works. Fee assessment is
+  // best-effort -- a Fee.API hiccup doesn't undo the admission.
   admitWithAccount(form: AdmitStudentForm): Observable<AdmittedStudent> {
     const suffix = Date.now().toString(36);
     const username = form.username.trim();
-    const email = form.email?.trim() || `${username.toLowerCase()}@gkmps.local`;
-    return this.api
-      .post<{ userId: string }>('/api/auth/register', {
-        email,
-        username,
-        password: form.password,
-        fullName: form.fullName,
-        role: 'Student',
-      })
+    const parentUsername = form.parentUsername?.trim() || '';
+    const created: string[] = [];
+
+    const register$ = (login: string, password: string, fullName: string, role: 'Student' | 'Parent', email?: string) =>
+      this.api
+        .post<{ userId: string }>('/api/auth/register', {
+          email: email?.trim() || `${login.toLowerCase()}@gkmps.local`,
+          username: login,
+          password,
+          fullName,
+          role,
+        })
+        .pipe(map((res) => { created.push(res.userId); return res.userId; }));
+
+    return register$(username, form.password, form.fullName, 'Student', form.email)
       .pipe(
-        switchMap((res) =>
+        switchMap((studentUserId) => {
+          const parent$: Observable<string | null> = parentUsername
+            ? register$(parentUsername, form.parentPassword ?? '', form.parentName?.trim() || `Parent of ${form.fullName}`, 'Parent', form.parentEmail)
+            : of(null);
+          return parent$.pipe(map((parentUserId) => ({ studentUserId, parentUserId })));
+        }),
+        switchMap(({ studentUserId, parentUserId }) =>
           this.api.post<Student>('/api/students', {
-            linkedUserId: res.userId,
+            linkedUserId: studentUserId,
+            parentUserId: parentUserId ?? undefined,
             admissionNumber: form.admissionNumber?.trim() || `ADM-${suffix}`,
             fullName: form.fullName,
             dateOfBirth: form.dateOfBirth ? `${form.dateOfBirth}T00:00:00Z` : undefined,
@@ -117,9 +143,11 @@ export class StudentsService {
             classId: form.classId,
             sectionId: form.sectionId,
             parentName: form.parentName || undefined,
+            parentEmail: form.parentEmail || undefined,
             parentPhone: form.parentPhone || undefined,
           }),
         ),
+        catchError((err) => this.rollbackLogins(created).pipe(switchMap(() => throwError(() => err)))),
         switchMap((student) =>
           this.fees
             .assessDues(student.id, {
@@ -133,8 +161,42 @@ export class StudentsService {
               map(() => student),
             ),
         ),
-        map((student) => ({ student, credentials: { username, password: form.password } })),
+        map((student) => ({
+          student,
+          credentials: { username, password: form.password },
+          parentCredentials: parentUsername ? { username: parentUsername, password: form.parentPassword ?? '' } : undefined,
+        })),
       );
+  }
+
+  // Creates a Parent login for an existing student and links it; rolls the login back if
+  // linking fails.
+  createParentLogin(student: Student, username: string, password: string): Observable<Student> {
+    const login = username.trim();
+    return this.api
+      .post<{ userId: string }>('/api/auth/register', {
+        email: student.parentEmail?.trim() || `${login.toLowerCase()}@gkmps.local`,
+        username: login,
+        password,
+        fullName: student.parentName?.trim() || `Parent of ${student.fullName}`,
+        role: 'Parent',
+      })
+      .pipe(
+        switchMap((res) =>
+          this.linkParent(student.id, res.userId).pipe(
+            catchError((err) => this.rollbackLogins([res.userId]).pipe(switchMap(() => throwError(() => err)))),
+          ),
+        ),
+      );
+  }
+
+  linkParent(studentId: string, parentUserId: string | null): Observable<Student> {
+    return this.api.patch(`/api/students/${studentId}/parent-account`, { parentUserId });
+  }
+
+  private rollbackLogins(userIds: string[]): Observable<unknown> {
+    if (userIds.length === 0) return of(null);
+    return forkJoin(userIds.map((id) => this.users.deleteUnused(id).pipe(catchError(() => of(null)))));
   }
 
   changeClass(id: string, classId: string, sectionId: string): Observable<Student> {

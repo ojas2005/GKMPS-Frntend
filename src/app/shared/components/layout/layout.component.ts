@@ -32,7 +32,8 @@ import { TopbarComponent } from '../topbar/topbar.component';
   styles: [],
 })
 export class LayoutComponent {
-  sidebarOpen = signal(true);
+  // Open by default on desktop; on phones it starts closed and opens from the menu button.
+  sidebarOpen = signal(typeof window === 'undefined' || window.innerWidth >= 768);
 
   toggleSidebar() {
     this.sidebarOpen.update((val) => !val);
