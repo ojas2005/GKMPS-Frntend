@@ -27,15 +27,18 @@ import { AuthService } from '../../../../core/auth/auth.service';
           <option *ngFor="let s of sections" [value]="s.id">Section {{ s.name }}</option>
         </select>
       </div>
-      <p *ngIf="selfService" class="text-sm text-neutral-600 -mt-3">
+      <p *ngIf="selfService && linkedToClass" class="text-sm text-neutral-600 -mt-3">
         Class: <span class="font-medium">{{ className(viewClassId) }} - {{ sectionName(viewSectionId) }}</span>
       </p>
+      <p *ngIf="selfService && !linkedToClass" class="bg-white rounded-xl p-6 shadow-sm border border-neutral-200 text-sm text-error-600">
+        Your account is not linked to a student record yet. Ask the school office to link it.
+      </p>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div *ngIf="!selfService || linkedToClass" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Subjects & syllabus -->
         <div class="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
           <h2 class="text-lg font-semibold text-neutral-900 mb-4">Subjects &amp; syllabus</h2>
-          <div *ngIf="!selfService" class="space-y-2 mb-4">
+          <div *ngIf="canAddSubject" class="space-y-2 mb-4">
             <input [(ngModel)]="subjectName_" placeholder="Subject name (e.g. Mathematics)" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
             <div class="flex gap-2">
               <input [(ngModel)]="subjectCode" placeholder="Code (e.g. MATH10)" class="w-40 px-3 py-2.5 border border-neutral-300 rounded-lg text-sm">
@@ -98,6 +101,9 @@ export class AcademicsComponent implements OnInit {
   private toast = inject(ToastService);
 
   selfService = this.auth.isSelfService();
+  // Creating subjects is an office action; teachers may still edit syllabus and set homework.
+  readonly canAddSubject = this.auth.hasRole('SuperAdmin', 'Principal', 'Admin');
+  readonly linkedToClass = !!this.auth.classId();
   subjects = signal<Subject[]>([]);
   homework = signal<Homework[]>([]);
   subjError = signal('');
@@ -118,7 +124,10 @@ export class AcademicsComponent implements OnInit {
   syllabusDraft = '';
   hw = { title: '', subjectId: '', dueDate: '' };
 
-  ngOnInit(): void { this.reload(); }
+  ngOnInit(): void {
+    if (this.selfService && !this.linkedToClass) return; // nothing to load for an unlinked account
+    this.reload();
+  }
 
   reload(): void {
     this.loadSubjects();
@@ -170,7 +179,7 @@ export class AcademicsComponent implements OnInit {
   }
 
   private msg(err: any, fb: string): string {
-    if (err?.status === 0) return 'Cannot reach the gateway on localhost:5100. Is the backend running?';
+    if (err?.status === 0) return 'Cannot reach the server. Check your connection and try again.';
     return err?.error?.errors?.[0] || err?.error?.message || fb;
   }
 }

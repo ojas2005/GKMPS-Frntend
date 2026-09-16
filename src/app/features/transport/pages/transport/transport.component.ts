@@ -43,7 +43,6 @@ import { TransportService, TransportRoute } from '../../transport.service';
           <button (click)="save()" [disabled]="saving()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">
             {{ saving() ? 'Saving...' : 'Add' }}
           </button>
-          <button (click)="fillSample()" type="button" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Fill sample</button>
           <span *ngIf="formError()" class="text-error-600 text-sm">{{ formError() }}</span>
         </div>
       </div>
@@ -78,10 +77,6 @@ export class TransportComponent implements OnInit {
   showForm = signal(false);
   form = { name: '', startPoint: '', endPoint: '', monthlyFee: 0 };
 
-  fillSample(): void {
-    this.form = { name: 'Route 1 — North', startPoint: 'Depot', endPoint: 'Sector 15', monthlyFee: 1500 };
-  }
-
   ngOnInit(): void { this.load(); }
 
   load(): void {
@@ -102,7 +97,7 @@ export class TransportComponent implements OnInit {
   }
 
   private msg(err: any, fb: string): string {
-    if (err?.status === 0) return 'Cannot reach the gateway on localhost:5100. Is the backend running?';
+    if (err?.status === 0) return 'Cannot reach the server. Check your connection and try again.';
     return err?.error?.errors?.[0] || err?.error?.message || fb;
   }
 }
