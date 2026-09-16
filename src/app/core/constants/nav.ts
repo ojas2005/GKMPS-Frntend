@@ -27,7 +27,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Library',       route: '/library',       roles: [...STAFF, RoleNames.Librarian, RoleNames.Teacher] },
   { label: 'Transport',     route: '/transport',     roles: STAFF },
   { label: 'Reports',       route: '/reports',       roles: [...STAFF, RoleNames.Accountant] },
-  { label: 'Settings',      route: '/settings',      roles: STAFF },
+  { label: 'Users & Access', route: '/settings',      roles: STAFF },
 ];
 
 // Roles allowed for a given route path (used by the route guard).

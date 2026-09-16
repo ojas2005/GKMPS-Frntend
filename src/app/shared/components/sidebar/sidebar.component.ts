@@ -25,7 +25,8 @@ import {
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive],
   template: `
-    <div class="w-64 bg-white border-r border-neutral-200 flex flex-col h-screen shadow-sm">
+    <!-- On phones/tablets the sidebar slides over the page (above the backdrop); on desktop it sits in the layout. -->
+    <div class="w-64 bg-white border-r border-neutral-200 flex flex-col h-screen shadow-sm fixed inset-y-0 left-0 z-50 md:static md:z-auto">
       <!-- Logo -->
       <div class="p-6 border-b border-neutral-200">
         <div class="flex items-center gap-2">
@@ -47,6 +48,7 @@ import {
             routerLinkActive="bg-primary-50 text-primary-600"
             [routerLinkActiveOptions]="{ exact: false }"
             class="flex items-center gap-3 px-4 py-3 rounded-lg text-neutral-700 hover:bg-neutral-100 transition-colors group"
+            (click)="isMobile() && onClose.emit()"
           >
             <span class="text-sm font-medium">{{ item.label }}</span>
           </a>

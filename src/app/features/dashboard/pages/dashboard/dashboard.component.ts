@@ -4,6 +4,8 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { ReportsService } from '../../../reports/reports.service';
 import { TeachersService } from '../../../teachers/teachers.service';
 import { FeesService } from '../../../fees/fees.service';
+import { CommunicationService, Announcement } from '../../../communication/communication.service';
+import { classNameById, SCHOOL_CLASSES } from '../../../../core/constants/classes';
 import { RouterLink } from '@angular/router';
 
 @Component({
@@ -22,12 +24,12 @@ import { RouterLink } from '@angular/router';
           <h1 class="text-3xl font-bold mb-2">
             Welcome Back, {{ firstName() }}! <span class="wave inline-block">👋</span>
           </h1>
-          <p class="text-primary-100">Here's your school's performance overview for today.</p>
+          <p class="text-primary-100">{{ isStaff() ? "Here's your school at a glance." : "Here's what's new for you today." }}</p>
         </div>
       </div>
 
-      <!-- Student: amount to pay -->
-      <div *ngIf="isStudent()" class="rounded-xl p-6 shadow-sm border flex items-center justify-between"
+      <!-- Student / parent: amount to pay (only once the ledger has loaded) -->
+      <div *ngIf="isSelfService() && feeLoaded()" class="rounded-xl p-6 shadow-sm border flex items-center justify-between"
         [class]="feePending() > 0 ? 'bg-error-50 border-error-200' : 'bg-success-50 border-success-200'">
         <div>
           <p class="text-sm" [class]="feePending() > 0 ? 'text-error-700' : 'text-success-700'">
@@ -72,14 +74,14 @@ import { RouterLink } from '@angular/router';
           <p class="text-3xl font-bold text-neutral-900">
             {{ totalStudents() !== null ? (studentsShown() | number : '1.0-0') : '—' }}
           </p>
-          <p class="text-xs text-neutral-500 mt-2">from Reporting.API</p>
+          <p class="text-xs text-neutral-500 mt-2">currently enrolled</p>
         </div>
 
         <!-- Teacher Count -->
         <div class="stat-card bg-white rounded-xl p-6 shadow-sm border border-neutral-200"
           style="--accent-from: #fbbf24; --accent-to: #d97706">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-neutral-600 text-sm font-medium">Total Teachers</h3>
+            <h3 class="text-neutral-600 text-sm font-medium">Total Staff</h3>
             <div class="stat-icon w-10 h-10 bg-warning-100 rounded-lg flex items-center justify-center">
               <svg class="w-6 h-6 text-warning-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
@@ -89,22 +91,24 @@ import { RouterLink } from '@angular/router';
           <p class="text-3xl font-bold text-neutral-900">
             {{ totalTeachers() !== null ? (teachersShown() | number : '1.0-0') : '—' }}
           </p>
-          <p class="text-xs text-neutral-500 mt-2">from Staff.API</p>
+          <p class="text-xs text-neutral-500 mt-2">on the staff roll</p>
         </div>
 
         <!-- Attendance Rate -->
         <div class="stat-card bg-white rounded-xl p-6 shadow-sm border border-neutral-200"
           style="--accent-from: #34d399; --accent-to: #059669">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-neutral-600 text-sm font-medium">Attendance Rate</h3>
+            <h3 class="text-neutral-600 text-sm font-medium">Active Classes</h3>
             <div class="stat-icon w-10 h-10 bg-success-100 rounded-lg flex items-center justify-center">
               <svg class="w-6 h-6 text-success-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
             </div>
           </div>
-          <p class="text-3xl font-bold text-neutral-900">{{ attendanceShown() | number : '1.1-1' }}%</p>
-          <p class="text-xs text-neutral-500 mt-2">Up from 92%</p>
+          <p class="text-3xl font-bold text-neutral-900">
+            {{ classBars().length || totalStudents() !== null ? (classesShown() | number : '1.0-0') : '—' }}
+          </p>
+          <p class="text-xs text-neutral-500 mt-2">with enrolled students</p>
         </div>
 
         <!-- Fee Collection -->
@@ -125,70 +129,51 @@ import { RouterLink } from '@angular/router';
         </div>
       </div>
 
-      <!-- Charts and Quick Actions -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Chart Placeholder (decorative animated bars) -->
+      <!-- Enrollment chart + quick actions (management roles) -->
+      <div *ngIf="isStaff()" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-neutral-200">
-          <h2 class="text-lg font-semibold text-neutral-900 mb-6">Attendance Trend</h2>
-          <div class="relative h-64 bg-gradient-to-b from-neutral-50 to-neutral-100 rounded-lg overflow-hidden flex items-end justify-around px-4">
-            <div
-              *ngFor="let h of chartBars; let i = index"
-              class="chart-bar"
-              [style.--h]="h + '%'"
-              [style.--d]="i * 0.07 + 's'"
-            ></div>
-            <p class="absolute inset-0 flex items-center justify-center text-neutral-500 pointer-events-none">
-              Chart will be displayed here
-            </p>
+          <h2 class="text-lg font-semibold text-neutral-900 mb-1">Students by class</h2>
+          <p class="text-xs text-neutral-500 mb-6">Active enrolment per class</p>
+          <div *ngIf="classBars().length === 0" class="h-56 flex items-center justify-center text-sm text-neutral-500">
+            {{ totalStudents() === null ? 'Loading…' : 'No students enrolled yet.' }}
+          </div>
+          <div *ngIf="classBars().length > 0" class="overflow-x-auto">
+            <div class="h-56 flex items-end gap-3 min-w-max px-1">
+              <div *ngFor="let b of classBars(); let i = index" class="flex flex-col items-center justify-end h-full w-12">
+                <span class="text-xs font-medium text-neutral-700 mb-1">{{ b.count }}</span>
+                <div class="chart-bar w-full" [style.--h]="b.pct + '%'" [style.--d]="i * 0.06 + 's'" [attr.title]="b.name + ': ' + b.count"></div>
+                <span class="text-[11px] text-neutral-500 mt-2 whitespace-nowrap">{{ b.name }}</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Quick Actions (management roles only) -->
-        <div *ngIf="isStaff()" class="bg-white rounded-xl p-6 shadow-sm border border-neutral-200">
+        <div class="bg-white rounded-xl p-6 shadow-sm border border-neutral-200">
           <h2 class="text-lg font-semibold text-neutral-900 mb-4">Quick Actions</h2>
           <div class="space-y-3">
-            <a routerLink="/attendance" class="block w-full px-4 py-3 rounded-lg border border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100 font-medium text-sm transition-colors text-left">
-              Mark Attendance
-            </a>
-            <a routerLink="/communication" class="block w-full px-4 py-3 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 font-medium text-sm transition-colors text-left">
-              Create Announcement
-            </a>
-            <a routerLink="/students" class="block w-full px-4 py-3 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 font-medium text-sm transition-colors text-left">
-              Add Student
-            </a>
-            <a routerLink="/reports" class="block w-full px-4 py-3 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 font-medium text-sm transition-colors text-left">
-              View Reports
+            <a *ngFor="let a of quickActions(); let first = first" [routerLink]="a.route"
+              class="block w-full px-4 py-3 rounded-lg border font-medium text-sm transition-colors text-left"
+              [class]="first ? 'border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100' : 'border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50'">
+              {{ a.label }}
             </a>
           </div>
         </div>
       </div>
 
-      <!-- Recent Activities -->
+      <!-- Latest announcements (server-scoped to what this user may see) -->
       <div class="bg-white rounded-xl p-6 shadow-sm border border-neutral-200">
-        <h2 class="text-lg font-semibold text-neutral-900 mb-6">Recent Activities</h2>
+        <h2 class="text-lg font-semibold text-neutral-900 mb-6">Latest announcements</h2>
+        <p *ngIf="announcements().length === 0" class="text-sm text-neutral-500">
+          {{ announcementsLoaded() ? 'No announcements right now.' : 'Loading…' }}
+        </p>
         <div class="space-y-4">
-          <div class="activity-item flex items-start gap-4 pb-4 border-b border-neutral-200">
+          <div *ngFor="let a of announcements(); let last = last" class="activity-item flex items-start gap-4"
+            [class.pb-4]="!last" [class.border-b]="!last" [class.border-neutral-200]="!last">
             <div class="activity-dot w-3 h-3 rounded-full bg-primary-500 mt-2"></div>
-            <div class="flex-1">
-              <p class="text-neutral-900 font-medium">New student admission</p>
-              <p class="text-neutral-600 text-sm">Aarav Kumar admitted to class 10-A</p>
-              <p class="text-neutral-500 text-xs">2 hours ago</p>
-            </div>
-          </div>
-          <div class="activity-item flex items-start gap-4 pb-4 border-b border-neutral-200">
-            <div class="activity-dot w-3 h-3 rounded-full bg-success-500 mt-2"></div>
-            <div class="flex-1">
-              <p class="text-neutral-900 font-medium">Exam scheduled</p>
-              <p class="text-neutral-600 text-sm">Mathematics final exam scheduled for March 15</p>
-              <p class="text-neutral-500 text-xs">5 hours ago</p>
-            </div>
-          </div>
-          <div class="activity-item flex items-start gap-4">
-            <div class="activity-dot w-3 h-3 rounded-full bg-warning-500 mt-2"></div>
-            <div class="flex-1">
-              <p class="text-neutral-900 font-medium">Fee reminder sent</p>
-              <p class="text-neutral-600 text-sm">Reminder sent to 45 parents for pending fees</p>
-              <p class="text-neutral-500 text-xs">1 day ago</p>
+            <div class="flex-1 min-w-0">
+              <p class="text-neutral-900 font-medium">{{ a.title }}</p>
+              <p *ngIf="a.body" class="text-neutral-600 text-sm whitespace-pre-line">{{ a.body }}</p>
+              <p class="text-neutral-500 text-xs">{{ a.publishedAtUtc | date: 'medium' }}</p>
             </div>
           </div>
         </div>
@@ -289,14 +274,14 @@ import { RouterLink } from '@angular/router';
         height: var(--h);
         border-radius: 6px 6px 0 0;
         background: linear-gradient(180deg, #38bdf8, #0284c7);
-        opacity: 0.3;
+        opacity: 0.85;
         transform-origin: bottom;
         animation:
           bar-grow 0.8s cubic-bezier(0.22, 0.9, 0.35, 1) var(--d) backwards,
           bar-breathe 4s ease-in-out calc(var(--d) + 0.8s) infinite;
         transition: opacity 0.25s ease;
       }
-      .chart-bar:hover { opacity: 0.65; }
+      .chart-bar:hover { opacity: 1; }
       @keyframes bar-grow {
         from { transform: scaleY(0); }
         to { transform: scaleY(1); }
@@ -312,9 +297,10 @@ import { RouterLink } from '@angular/router';
         transition: transform 0.25s ease, background 0.25s ease;
         border-radius: 0.5rem;
       }
-      .activity-item:nth-child(1) { animation-delay: 0.15s; }
-      .activity-item:nth-child(2) { animation-delay: 0.28s; }
-      .activity-item:nth-child(3) { animation-delay: 0.41s; }
+      .activity-item:nth-child(2) { animation-delay: 0.1s; }
+      .activity-item:nth-child(3) { animation-delay: 0.2s; }
+      .activity-item:nth-child(4) { animation-delay: 0.3s; }
+      .activity-item:nth-child(5) { animation-delay: 0.4s; }
       .activity-item:hover {
         transform: translateX(6px);
       }
@@ -340,6 +326,7 @@ export class DashboardComponent implements OnInit {
   private reports = inject(ReportsService);
   private teachers = inject(TeachersService);
   private fees = inject(FeesService);
+  private communication = inject(CommunicationService);
 
   totalStudents = signal<number | null>(null);
   totalTeachers = signal<number | null>(null);
@@ -352,12 +339,14 @@ export class DashboardComponent implements OnInit {
   studentsShown = signal(0);
   teachersShown = signal(0);
   feeShown = signal(0);
-  attendanceShown = signal(0);
+  classesShown = signal(0);
   feePendingShown = signal(0);
   salaryPendingShown = signal(0);
 
-  // Decorative heights for the chart placeholder bars.
-  chartBars = [42, 68, 55, 80, 62, 90, 74, 58, 85, 66, 78, 70];
+  feeLoaded = signal(false);
+  classBars = signal<Array<{ name: string; count: number; pct: number }>>([]);
+  announcements = signal<Announcement[]>([]);
+  announcementsLoaded = signal(false);
 
   firstName(): string {
     return this.auth.currentUser()?.fullName?.split(' ')[0] ?? 'there';
@@ -368,8 +357,20 @@ export class DashboardComponent implements OnInit {
     return this.auth.hasRole('SuperAdmin', 'Principal', 'Admin', 'Accountant');
   }
 
-  isStudent(): boolean {
-    return this.auth.hasRole('Student');
+  isSelfService(): boolean {
+    return this.auth.isSelfService();
+  }
+
+  quickActions(): Array<{ label: string; route: string }> {
+    if (this.auth.hasRole('Accountant')) {
+      return [{ label: 'Record a Fee Payment', route: '/fees' }, { label: 'View Reports', route: '/reports' }];
+    }
+    return [
+      { label: 'Mark Attendance', route: '/attendance' },
+      { label: 'Create Announcement', route: '/communication' },
+      { label: 'Admit Student', route: '/students' },
+      { label: 'View Reports', route: '/reports' },
+    ];
   }
 
   isTeacherRole(): boolean {
@@ -377,7 +378,12 @@ export class DashboardComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    if (this.isStudent()) {
+    this.communication.listAnnouncements({ pageSize: 5 }).subscribe({
+      next: (list) => { this.announcements.set((list ?? []).slice(0, 5)); this.announcementsLoaded.set(true); },
+      error: () => this.announcementsLoaded.set(true),
+    });
+
+    if (this.isSelfService()) {
       const studentId = this.auth.studentId();
       if (studentId) {
         this.fees.myPayments(studentId).subscribe({
@@ -389,6 +395,7 @@ export class DashboardComponent implements OnInit {
               return sum + Math.max(0, total - paid - waiver);
             }, 0);
             this.feePending.set(pending);
+            this.feeLoaded.set(true);
             this.countUp(pending, this.feePendingShown);
           },
           error: () => {},
@@ -411,14 +418,20 @@ export class DashboardComponent implements OnInit {
 
     if (!this.isStaff()) return; // other self-service roles (Parent) don't load admin stats (would 403)
 
-    this.countUp(94.5, this.attendanceShown, 1);
-
     // Each call fails soft — a card just shows "—" if its service is unreachable.
     this.reports.enrollment().subscribe({
       next: (r) => {
         const v = r?.totalStudents ?? null;
         this.totalStudents.set(v);
         if (v !== null) this.countUp(v, this.studentsShown);
+
+        // Bars in the school's own class order (PG ... Class 10), scaled to the largest class.
+        const counts = r?.activeCountByClass ?? {};
+        const order = (id: string) => { const i = SCHOOL_CLASSES.findIndex((c) => c.id === id); return i < 0 ? 999 : i; };
+        const entries = Object.entries(counts).filter(([, n]) => n > 0).sort(([a], [b]) => order(a) - order(b));
+        const max = Math.max(1, ...entries.map(([, n]) => n));
+        this.classBars.set(entries.map(([id, n]) => ({ name: classNameById(id), count: n, pct: Math.max(4, Math.round((n / max) * 100)) })));
+        this.countUp(entries.length, this.classesShown);
       },
       error: () => {},
     });

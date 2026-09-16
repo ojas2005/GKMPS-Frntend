@@ -26,9 +26,9 @@ export interface ParentMessage {
 export class CommunicationService {
   private api = inject(ApiService);
 
-  // role/classId scope the feed to what's relevant to the caller (the server does no
-  // access-control filtering here — announcements are broadcasts, not private data —
-  // so pass the caller's own role/classId to see what they'd actually be shown).
+  // role/classId only matter for owner/principal/admin callers (to browse a given
+  // audience); for everyone else the server scopes the feed to their own role and class
+  // from the token and ignores these.
   // Note: unlike most list endpoints, this one returns a bare array, not a PagedResult.
   listAnnouncements(query: {
     role?: string;

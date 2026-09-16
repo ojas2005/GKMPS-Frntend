@@ -21,6 +21,11 @@ export const routes: Routes = [
         loadChildren: () => import('./features/dashboard/dashboard.routes').then(m => m.DASHBOARD_ROUTES),
       },
       {
+        // Every signed-in role: own profile + change password (reached from the user menu).
+        path: 'account',
+        loadChildren: () => import('./features/account/account.routes').then(m => m.ACCOUNT_ROUTES),
+      },
+      {
         path: 'my-portal',
         canActivate: [roleGuard],
         data: { roles: rolesFor('/my-portal') },
