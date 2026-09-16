@@ -270,7 +270,6 @@ import { RouterLink } from '@angular/router';
 
       /* ---------- Decorative chart bars ---------- */
       .chart-bar {
-        width: 5.5%;
         height: var(--h);
         border-radius: 6px 6px 0 0;
         background: linear-gradient(180deg, #38bdf8, #0284c7);

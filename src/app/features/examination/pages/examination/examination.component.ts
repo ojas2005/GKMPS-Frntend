@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ExaminationService, Exam, StudentResult } from '../../examination.service';
 import { AcademicsService, Subject } from '../../../academics/academics.service';
-import { SCHOOL_CLASSES, DEFAULT_CLASS } from '../../../../core/constants/classes';
+import { SCHOOL_CLASSES, DEFAULT_CLASS, classNameById } from '../../../../core/constants/classes';
 import { AuthService } from '../../../../core/auth/auth.service';
 
 @Component({
@@ -101,11 +101,13 @@ import { AuthService } from '../../../../core/auth/auth.service';
         <div *ngIf="!loading() && !error() && rows().length === 0" class="p-8 text-center text-neutral-500">No exams.</div>
         <table *ngIf="!loading() && !error() && rows().length > 0" class="w-full text-sm">
           <thead class="bg-neutral-50 text-neutral-600 text-left">
-            <tr><th class="px-6 py-3 font-medium">Name</th><th class="px-6 py-3 font-medium">Max</th><th class="px-6 py-3 font-medium">Status</th><th class="px-6 py-3 font-medium"></th></tr>
+            <tr><th class="px-6 py-3 font-medium">Name</th><th class="px-6 py-3 font-medium">Class</th><th class="px-6 py-3 font-medium">Date</th><th class="px-6 py-3 font-medium">Max</th><th class="px-6 py-3 font-medium">Status</th><th class="px-6 py-3 font-medium"></th></tr>
           </thead>
           <tbody>
             <tr *ngFor="let e of rows()" class="border-t border-neutral-200">
               <td class="px-6 py-3 text-neutral-900">{{ e.name }}</td>
+              <td class="px-6 py-3 text-neutral-600">{{ examClass(e.classId) }}</td>
+              <td class="px-6 py-3 text-neutral-600">{{ e.examDateUtc ? (e.examDateUtc | date: 'mediumDate') : '—' }}</td>
               <td class="px-6 py-3 text-neutral-600">{{ e.maxMarks ?? '—' }}</td>
               <td class="px-6 py-3 text-neutral-600">{{ e.isPublished ? 'Published' : 'Draft' }}</td>
               <td class="px-6 py-3 text-right">
@@ -134,6 +136,8 @@ export class ExaminationComponent implements OnInit {
   showForm = signal(false);
   classes = SCHOOL_CLASSES;
   form = { name: '', classId: DEFAULT_CLASS.id, subjectId: '', examDate: '', maxMarks: 100, passingMarks: 35 };
+
+  examClass = (id?: string | null) => classNameById(id ?? undefined);
 
   // The subject list holds every class's subjects; only offer the chosen class's ones.
   subjectsForClass = () => this.subjects().filter((s) => !s.classId || s.classId === this.form.classId);
