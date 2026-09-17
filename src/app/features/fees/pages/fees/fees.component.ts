@@ -27,8 +27,8 @@ interface SearchPendingRow {
     <div class="p-6 space-y-6">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-neutral-900">{{ selfService ? 'My Fees' : 'Fees' }}</h1>
-          <p class="text-neutral-600 text-sm">{{ selfService ? 'Your fee payments and dues.' : 'Fee structures, pending dues & collection totals from Fee.API.' }}</p>
+          <h1 class="text-2xl font-bold text-neutral-900">{{ selfService ? (parentView ? "My Child's Fees" : 'My Fees') : 'Fees' }}</h1>
+          <p class="text-neutral-600 text-sm">{{ selfService ? (parentView ? "Your child's fee payments and dues." : 'Your fee payments and dues.') : 'Fee structures, pending dues & collection totals.' }}</p>
         </div>
         <button *ngIf="!selfService" (click)="showForm.set(!showForm())" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium">
           {{ showForm() ? 'Close' : '+ Fee Structure' }}
@@ -233,6 +233,7 @@ export class FeesComponent implements OnInit {
   private studentsService = inject(StudentsService);
   private auth = inject(AuthService);
   selfService = this.auth.isSelfService();
+  parentView = this.auth.isParentView();
   myFees = signal<FeePayment[]>([]);
   myTransactions = signal<PaymentTransactionSummary[]>([]);
   rows = signal<FeeStructure[]>([]);

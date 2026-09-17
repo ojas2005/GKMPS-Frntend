@@ -5,6 +5,7 @@ import { ThemeService } from '../../services/theme.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { CommunicationService, Announcement } from '../../../features/communication/communication.service';
 import { classNameById } from '../../../core/constants/classes';
+import { rolesFor } from '../../../core/constants/nav';
 import {
   Menu,
   Bell,
@@ -35,13 +36,15 @@ import {
         </button>
 
         <!-- Search -->
-        <div class="hidden md:flex items-center gap-2 bg-neutral-100 rounded-lg px-3 py-2 max-w-xs">
+        <div *ngIf="canSearchStudents()" class="hidden md:flex items-center gap-2 bg-neutral-100 rounded-lg px-3 py-2 max-w-xs">
           <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
           </svg>
-          <input 
-            type="text" 
-            placeholder="Search..." 
+          <input
+            #searchBox
+            type="text"
+            placeholder="Search students..."
+            (keyup.enter)="searchStudents(searchBox.value)"
             class="bg-transparent outline-none text-sm w-32 placeholder-neutral-400"
           >
         </div>
@@ -147,6 +150,15 @@ export class TopbarComponent implements OnInit {
   showAnnouncements = signal(false);
   announcements = signal<Announcement[]>([]);
   className = classNameById;
+
+  // The magnifier only makes sense for roles that can open the student list.
+  canSearchStudents = computed(() => this.auth.hasRole(...rolesFor('/students')));
+
+  // Enter in the top bar runs the students page's own search via a query param.
+  searchStudents(term: string): void {
+    const q = (term ?? '').trim();
+    this.router.navigate(['/students'], q ? { queryParams: { q } } : {});
+  }
 
   userName = computed(() => this.auth.currentUser()?.fullName ?? 'Guest');
   userRole = computed(() => this.auth.currentUser()?.role ?? '');

@@ -14,8 +14,8 @@ import { AuthService } from '../../../../core/auth/auth.service';
     <div class="p-6 space-y-6">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-neutral-900">{{ selfService ? 'My Results' : 'Examinations' }}</h1>
-          <p class="text-neutral-600 text-sm">{{ selfService ? 'Your published exam results and report cards.' : 'Exams from Examination.API.' }}</p>
+          <h1 class="text-2xl font-bold text-neutral-900">{{ selfService ? (parentView ? "My Child's Results" : 'My Results') : 'Examinations' }}</h1>
+          <p class="text-neutral-600 text-sm">{{ selfService ? (parentView ? "Your child's published exam results and report cards." : 'Your published exam results and report cards.') : 'Exams, marks and report cards.' }}</p>
         </div>
         <button *ngIf="!selfService" (click)="showForm.set(!showForm())" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium">
           {{ showForm() ? 'Close' : '+ New Exam' }}
@@ -125,6 +125,7 @@ export class ExaminationComponent implements OnInit {
   private academics = inject(AcademicsService);
   private auth = inject(AuthService);
   selfService = this.auth.isSelfService();
+  parentView = this.auth.isParentView();
   myResults = signal<StudentResult[]>([]);
   resultsError = signal('');
   rows = signal<Exam[]>([]);

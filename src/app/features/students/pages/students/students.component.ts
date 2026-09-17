@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { StudentsService, Student, AdmitStudentForm, Credentials } from '../../students.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classNameById, sectionNameById } from '../../../../core/constants/classes';
@@ -166,6 +166,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classN
 export class StudentsComponent implements OnInit {
   private service = inject(StudentsService);
   private auth = inject(AuthService);
+  private route = inject(ActivatedRoute);
 
   // Admission is an office action (the API rejects teachers).
   readonly canAdmit = this.auth.hasRole('SuperAdmin', 'Principal', 'Admin');
@@ -193,7 +194,12 @@ export class StudentsComponent implements OnInit {
   form: AdmitStudentForm = this.blankForm();
 
   ngOnInit(): void {
-    this.load();
+    // ?q= comes from the top bar's search box; re-running on every change means a second
+    // search from the top bar refreshes this list instead of doing nothing.
+    this.route.queryParamMap.subscribe((params) => {
+      this.keyword = params.get('q') ?? '';
+      this.load();
+    });
   }
 
   load(): void {

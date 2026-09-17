@@ -456,7 +456,10 @@ export class DashboardComponent implements OnInit {
 
   /** Animate a display signal from 0 to `target` with an ease-out curve. */
   private countUp(target: number, out: WritableSignal<number>, decimals = 0): void {
-    if (typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    // Skip the animation when it can't run properly: reduced motion, or a hidden tab
+    // (requestAnimationFrame is paused there, which would leave the figure showing 0).
+    const hidden = typeof document !== 'undefined' && document.hidden;
+    if (hidden || (typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches)) {
       out.set(target);
       return;
     }

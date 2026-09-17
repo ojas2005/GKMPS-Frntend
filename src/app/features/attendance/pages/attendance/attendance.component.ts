@@ -13,9 +13,9 @@ import { AuthService } from '../../../../core/auth/auth.service';
   template: `
     <div class="p-6 space-y-6">
       <div>
-        <h1 class="text-2xl font-bold text-neutral-900">{{ selfService ? 'My Attendance' : 'Attendance' }}</h1>
+        <h1 class="text-2xl font-bold text-neutral-900">{{ selfService ? (parentView ? "My Child's Attendance" : 'My Attendance') : 'Attendance' }}</h1>
         <p class="text-neutral-600 text-sm">
-          {{ selfService ? 'Your attendance percentage and daily log.' :
+          {{ selfService ? (parentView ? "Your child's attendance percentage and daily log." : 'Your attendance percentage and daily log.') :
              (isTeacher ? 'Mark attendance for your class (class teachers only).' : 'View a class register or mark students.') }}
         </p>
       </div>
@@ -123,6 +123,8 @@ export class AttendanceComponent implements OnInit {
   private auth = inject(AuthService);
 
   selfService = this.auth.isSelfService();
+
+  parentView = this.auth.isParentView();
   isTeacher = this.auth.hasRole('Teacher');
   classTeacherClassId = this.auth.classTeacherClassId();
 

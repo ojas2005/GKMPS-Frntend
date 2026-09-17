@@ -13,7 +13,7 @@ import { TransportService, TransportRoute } from '../../transport.service';
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-2xl font-bold text-neutral-900">Transport</h1>
-          <p class="text-neutral-600 text-sm">Routes from Transport.API.</p>
+          <p class="text-neutral-600 text-sm">Routes, vehicles and the students on each one.</p>
         </div>
         <button (click)="showForm.set(!showForm())" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium">
           {{ showForm() ? 'Close' : '+ Add Route' }}

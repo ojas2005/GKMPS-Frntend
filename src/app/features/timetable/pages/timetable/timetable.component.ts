@@ -27,7 +27,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
   template: `
     <div class="p-6 space-y-6">
       <div>
-        <h1 class="text-2xl font-bold text-neutral-900">{{ isAdmin ? 'Timetable' : 'My Timetable' }}</h1>
+        <h1 class="text-2xl font-bold text-neutral-900">{{ isAdmin ? 'Timetable' : (parentView ? "My Child's Timetable" : 'My Timetable') }}</h1>
         <p class="text-neutral-600 text-sm">
           {{ isAdmin ? 'Configure teacher groups and auto-generate every class\\'s weekly schedule.'
                      : 'Same schedule every day, Monday to Saturday · 8:00 AM - 2:00 PM · lunch 10:40-11:20.' }}
@@ -229,6 +229,8 @@ export class TimetableComponent implements OnInit {
   private auth = inject(AuthService);
 
   isAdmin = this.auth.hasRole('SuperAdmin', 'Principal', 'Admin');
+
+  parentView = this.auth.isParentView();
   isStudent = this.auth.isSelfService();
   isTeacher = this.auth.hasRole('Teacher');
 

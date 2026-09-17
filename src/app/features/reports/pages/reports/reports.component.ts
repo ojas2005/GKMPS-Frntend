@@ -12,7 +12,7 @@ import { SCHOOL_CLASSES, classNameById } from '../../../../core/constants/classe
     <div class="p-6 space-y-6">
       <div>
         <h1 class="text-2xl font-bold text-neutral-900">Reports</h1>
-        <p class="text-neutral-600 text-sm">Enrollment &amp; fee-collection reports from Reporting.API.</p>
+        <p class="text-neutral-600 text-sm">Enrollment &amp; fee-collection reports.</p>
       </div>
 
       <!-- Enrollment -->

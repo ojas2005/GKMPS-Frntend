@@ -41,6 +41,12 @@ export class AuthService {
     return this.hasRole('Student', 'Parent');
   }
 
+  // A parent sees the same self-service pages as their child, so the wording says
+  // "my child's" instead of "my".
+  isParentView(): boolean {
+    return this.hasRole('Parent');
+  }
+
   // The logged-in student's own studentId (null for staff).
   studentId(): string | null {
     return this.currentUser()?.studentId ?? null;

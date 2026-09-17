@@ -14,7 +14,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
     <div class="p-6 space-y-6">
       <div>
         <h1 class="text-2xl font-bold text-neutral-900">Academics</h1>
-        <p class="text-neutral-600 text-sm">{{ selfService ? 'Your subjects, syllabus and homework.' : 'Subjects, syllabus & homework from Academic.API.' }}</p>
+        <p class="text-neutral-600 text-sm">{{ selfService ? (parentView ? "Your child's subjects, syllabus and homework." : 'Your subjects, syllabus and homework.') : 'Subjects, syllabus & homework.' }}</p>
       </div>
 
       <!-- Class picker (staff only; students are locked to their own class) -->
@@ -101,6 +101,8 @@ export class AcademicsComponent implements OnInit {
   private toast = inject(ToastService);
 
   selfService = this.auth.isSelfService();
+
+  parentView = this.auth.isParentView();
   // Creating subjects is an office action; teachers may still edit syllabus and set homework.
   readonly canAddSubject = this.auth.hasRole('SuperAdmin', 'Principal', 'Admin');
   readonly linkedToClass = !!this.auth.classId();
