@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { retry, throwError, timer } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 
 @Component({
@@ -110,7 +111,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
               <span *ngIf="!isLoading()">Sign In</span>
               <span *ngIf="isLoading()" class="flex items-center justify-center gap-2">
                 <span class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                Signing in...
+                {{ wakingServer() ? 'Waking up the server...' : 'Signing in...' }}
               </span>
             </button>
           </form>
@@ -415,6 +416,7 @@ export class LoginComponent {
   isLoading = signal(false);
   showPassword = signal(false);
   errorMessage = signal('');
+  wakingServer = signal(false);
 
   toggleShowPassword(): void {
     this.showPassword.update((v) => !v);
@@ -443,7 +445,22 @@ export class LoginComponent {
     this.errorMessage.set('');
 
     const { loginId, password } = this.loginForm.value;
-    this.auth.login({ loginId: (loginId ?? '').trim(), password }).subscribe({
+    this.wakingServer.set(false);
+    this.auth
+      .login({ loginId: (loginId ?? '').trim(), password })
+      .pipe(
+        // The API scales to zero when idle; the first request after a quiet spell can fail
+        // with no response (or a gateway 502-504) while it starts, so retry those for ~40s.
+        retry({
+          count: 6,
+          delay: (err, attempt) => {
+            if (![0, 502, 503, 504].includes(err?.status)) return throwError(() => err);
+            this.wakingServer.set(true);
+            return timer(Math.min(2000 * attempt, 10000));
+          },
+        }),
+      )
+      .subscribe({
       next: () => {
         this.isLoading.set(false);
         this.router.navigate(['/dashboard']);
@@ -458,6 +475,6 @@ export class LoginComponent {
             : 'Invalid login ID or password.');
         this.errorMessage.set(msg);
       },
-    });
+      });
   }
 }
