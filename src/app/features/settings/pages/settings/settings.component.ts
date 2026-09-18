@@ -69,6 +69,8 @@ const rank = (role?: string | null) => (role ? RANK[role] ?? 0 : 0);
                 <td class="px-6 py-3 text-right whitespace-nowrap">
                   <ng-container *ngIf="canManage(u)">
                     <button (click)="toggleReset(u)" class="text-primary-600 hover:underline text-sm mr-4">Reset password</button>
+                    <button *ngIf="!isMe(u)" (click)="resetTwoFactor(u)" [disabled]="busyId() === u.id"
+                      class="text-primary-600 hover:underline text-sm mr-4 disabled:text-neutral-400">Reset two-step</button>
                     <button *ngIf="!isMe(u)" (click)="setActive(u, !u.isActive)" [disabled]="busyId() === u.id"
                       class="text-sm hover:underline disabled:text-neutral-400"
                       [class]="u.isActive ? 'text-error-600' : 'text-success-600'">
@@ -152,7 +154,7 @@ export class SettingsComponent implements OnInit {
   }
 
   resetPassword(u: UserSummary): void {
-    if (this.newPassword.length < 8) { this.toast.error('The password must be at least 8 characters.'); return; }
+    if (this.newPassword.length < 10) { this.toast.error('The password must be at least 10 characters.'); return; }
     const password = this.newPassword;
     this.busyId.set(u.id);
     this.usersService.setPassword(u.id, password).subscribe({
@@ -161,6 +163,15 @@ export class SettingsComponent implements OnInit {
         this.justReset.set({ name: u.fullName, login: u.username || u.email, password });
       },
       error: (err) => { this.busyId.set(null); this.toast.error(this.msg(err, 'Could not reset the password.')); },
+    });
+  }
+
+  resetTwoFactor(u: UserSummary): void {
+    if (!confirm(`Reset two-step sign-in for ${u.fullName}? They'll be signed out everywhere and set it up again at next sign-in.`)) return;
+    this.busyId.set(u.id);
+    this.usersService.resetTwoFactor(u.id).subscribe({
+      next: () => { this.busyId.set(null); this.toast.success(`Two-step sign-in reset for ${u.fullName}.`); },
+      error: (err) => { this.busyId.set(null); this.toast.error(this.msg(err, 'Could not reset two-step sign-in.')); },
     });
   }
 

@@ -5,7 +5,7 @@ import { Observable, switchMap, tap, throwError, timer } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { apiBaseUrl } from '../config/runtime-config';
 import { ApiResponse } from '../models/api-response';
-import { AuthResult, CurrentUser, LoginRequest, RefreshRequest } from './auth.models';
+import { AuthResult, CurrentUser, LoginOutcome, LoginRequest, PendingAction, RefreshRequest } from './auth.models';
 import {
   SignOutReason, clearSessionActivity, noteServerContact, recordActivity, setIdleTimeoutMinutes, setSignOutReason,
 } from './session-activity';
@@ -99,10 +99,34 @@ export class AuthService {
     return this.currentUser()?.classTeacherOfSectionId ?? null;
   }
 
-  login(body: LoginRequest): Observable<CurrentUser> {
+  login(body: LoginRequest): Observable<LoginOutcome> {
     return this.http
       .post<ApiResponse<AuthResult>>(`${this.base}/api/auth/login`, body)
+      .pipe(
+        map((r): LoginOutcome =>
+          r.data!.twoFactorRequired
+            ? { kind: 'two-factor', challenge: r.data!.twoFactorChallenge! }
+            : { kind: 'signed-in', user: this.applyAuth(r.data!) },
+        ),
+      );
+  }
+
+  /** Second step of signing in: a code from the authenticator app, or a recovery code. */
+  completeTwoFactor(challenge: string, code: string): Observable<CurrentUser> {
+    return this.http
+      .post<ApiResponse<AuthResult>>(`${this.base}/api/auth/login/two-factor`, { challenge, code })
       .pipe(map((r) => this.applyAuth(r.data!)));
+  }
+
+  /** The step this user must finish before using the app, if any. */
+  pendingAction(): PendingAction | null {
+    return this.currentUser()?.pendingAction ?? null;
+  }
+
+  /** The server said a step is still required (e.g. a stale page after sign-in). */
+  markPending(action: PendingAction): void {
+    const user = this.currentUser();
+    if (user && user.pendingAction !== action) this.storeUser({ ...user, pendingAction: action });
   }
 
   // Changing your own password signs out every other session; this one gets fresh tokens.
@@ -173,13 +197,16 @@ export class AuthService {
       staffId: result.staffId ?? null,
       classTeacherOfClassId: result.classTeacherOfClassId ?? null,
       classTeacherOfSectionId: result.classTeacherOfSectionId ?? null,
+      pendingAction: result.pendingAction ?? null,
     };
-    this.currentUser.set(user);
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(REFRESH_KEY, result.refreshToken);
-      localStorage.setItem(USER_KEY, JSON.stringify(user));
-    }
+    if (typeof localStorage !== 'undefined') localStorage.setItem(REFRESH_KEY, result.refreshToken);
+    this.storeUser(user);
     return user;
+  }
+
+  private storeUser(user: CurrentUser): void {
+    this.currentUser.set(user);
+    if (typeof localStorage !== 'undefined') localStorage.setItem(USER_KEY, JSON.stringify(user));
   }
 
   private clear(): void {

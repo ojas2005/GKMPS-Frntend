@@ -20,3 +20,13 @@ export const roleGuard: CanActivateFn = (route) => {
   router.navigate(['/dashboard']);
   return false;
 };
+
+// While a required step is pending (choose a password, set up two-step sign-in) only the
+// account page is reachable. The API enforces the same thing; this just shows the right page.
+export const pendingActionGuard: CanActivateFn = (_route, state) => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  if (!auth.pendingAction() || state.url.startsWith('/account')) return true;
+  router.navigate(['/account']);
+  return false;
+};

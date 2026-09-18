@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { retry, throwError, timer } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -9,7 +9,7 @@ import { SignOutReason, idleTimeoutMinutes, takeSignOutReason } from '../../../.
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule],
   template: `
     <div class="login-page min-h-screen relative overflow-hidden flex items-center justify-center px-4">
       <!-- Deep gradient base -->
@@ -53,8 +53,22 @@ import { SignOutReason, idleTimeoutMinutes, takeSignOutReason } from '../../../.
             <p class="text-primary-800 text-sm">{{ signedOutMessage() }}</p>
           </div>
 
-          <!-- Form -->
-          <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-4">
+          <!-- Step 2: the code from the authenticator app -->
+          <form *ngIf="challenge()" (ngSubmit)="submitCode()" class="space-y-4">
+            <div>
+              <label for="two-factor-code" class="block text-sm font-medium text-neutral-900 mb-2">Code from your authenticator app</label>
+              <input id="two-factor-code" name="code" [(ngModel)]="code" autocomplete="one-time-code" inputmode="numeric"
+                     placeholder="123 456" class="w-full px-4 py-2.5 rounded-lg border border-neutral-300 text-center tracking-widest text-lg">
+              <p class="text-xs text-neutral-500 mt-2">Lost your phone? Enter one of your recovery codes instead.</p>
+            </div>
+            <button type="submit" [disabled]="isLoading() || !code.trim()" class="submit-btn w-full text-white font-medium py-2.5 rounded-lg">
+              {{ isLoading() ? 'Checking...' : 'Verify' }}
+            </button>
+            <button type="button" (click)="startOver()" class="w-full text-sm text-neutral-600 hover:underline">Use a different account</button>
+          </form>
+
+          <!-- Step 1: login ID and password -->
+          <form *ngIf="!challenge()" [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-4">
             <!-- Login ID Input -->
             <div class="stagger" style="--i: 1">
               <label class="block text-sm font-medium text-neutral-900 mb-2">
@@ -444,6 +458,42 @@ export class LoginComponent {
     return '';
   }
 
+  // Two-step sign-in: set once the password is accepted and a code is needed.
+  challenge = signal<string | null>(null);
+  code = '';
+
+  submitCode(): void {
+    const challenge = this.challenge();
+    if (!challenge || !this.code.trim()) return;
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+    this.auth.completeTwoFactor(challenge, this.code.trim()).subscribe({
+      next: (user) => {
+        this.isLoading.set(false);
+        this.afterSignIn(user.pendingAction);
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        this.code = '';
+        const msg = err?.error?.message || 'That code is not right.';
+        // The server ends the challenge after too many wrong codes or when it expires.
+        if (/password again/i.test(msg)) this.challenge.set(null);
+        this.errorMessage.set(msg);
+      },
+    });
+  }
+
+  startOver(): void {
+    this.challenge.set(null);
+    this.code = '';
+    this.errorMessage.set('');
+  }
+
+  // A required step (new password, two-step setup) comes before anything else.
+  private afterSignIn(pending: string | null | undefined): void {
+    this.router.navigate([pending ? '/account' : '/dashboard']);
+  }
+
   isFieldInvalid(fieldName: string): boolean {
     const field = this.loginForm.get(fieldName);
     return !!(field && field.invalid && (field.dirty || field.touched));
@@ -474,9 +524,13 @@ export class LoginComponent {
         }),
       )
       .subscribe({
-      next: () => {
+      next: (outcome) => {
         this.isLoading.set(false);
-        this.router.navigate(['/dashboard']);
+        if (outcome.kind === 'two-factor') {
+          this.challenge.set(outcome.challenge);
+          return;
+        }
+        this.afterSignIn(outcome.user.pendingAction);
       },
       error: (err) => {
         this.isLoading.set(false);

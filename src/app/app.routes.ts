@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { LayoutComponent } from './shared/components/layout/layout.component';
-import { authGuard, roleGuard } from './core/auth/auth.guard';
+import { authGuard, pendingActionGuard, roleGuard } from './core/auth/auth.guard';
 import { rolesFor } from './core/constants/nav';
 
 export const routes: Routes = [
@@ -14,7 +14,8 @@ export const routes: Routes = [
   {
     path: '',
     component: LayoutComponent,
-    canActivate: [authGuard],
+    canActivate: [authGuard, pendingActionGuard],
+    canActivateChild: [pendingActionGuard],
     children: [
       {
         path: 'dashboard',
