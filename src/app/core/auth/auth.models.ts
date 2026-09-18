@@ -17,6 +17,8 @@ export interface AuthResult {
   staffId?: string | null;
   classTeacherOfClassId?: string | null;
   classTeacherOfSectionId?: string | null;
+  // Minutes of inactivity before the app signs the user out.
+  sessionIdleTimeoutMinutes?: number | null;
 }
 
 export interface LoginRequest {

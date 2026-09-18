@@ -1,10 +1,14 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, NgZone, computed, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { apiBaseUrl } from '../config/runtime-config';
 import { ApiResponse } from '../models/api-response';
 import { AuthResult, CurrentUser, LoginRequest, RefreshRequest } from './auth.models';
+import {
+  SignOutReason, clearSessionActivity, noteServerContact, recordActivity, setIdleTimeoutMinutes, setSignOutReason,
+} from './session-activity';
 
 const REFRESH_KEY = 'gkmps.refreshToken';
 const USER_KEY = 'gkmps.user';
@@ -22,6 +26,23 @@ export class AuthService {
   private accessToken = signal<string | null>(null);
   readonly currentUser = signal<CurrentUser | null>(this.readStoredUser());
   readonly isLoggedIn = computed(() => !!this.currentUser());
+
+  constructor() {
+    // Signing out in one tab (or being signed out for inactivity) signs out every tab.
+    if (typeof window !== 'undefined') {
+      const router = inject(Router);
+      const zone = inject(NgZone);
+      window.addEventListener('storage', (e) => {
+        if (e.key === REFRESH_KEY && e.newValue === null && this.currentUser()) {
+          zone.run(() => {
+            this.accessToken.set(null);
+            this.currentUser.set(null);
+            router.navigate(['/auth/login']);
+          });
+        }
+      });
+    }
+  }
 
   getAccessToken(): string | null {
     return this.accessToken();
@@ -108,7 +129,9 @@ export class AuthService {
       );
   }
 
-  logout(): void {
+  // `reason` is remembered so the login page can explain an automatic sign-out.
+  logout(reason: SignOutReason = 'manual'): void {
+    setSignOutReason(reason);
     const refreshToken = this.getRefreshToken();
     if (refreshToken) {
       // Best-effort server-side revoke (needs only the refresh token); ignore failures.
@@ -121,6 +144,9 @@ export class AuthService {
 
   private applyAuth(result: AuthResult): CurrentUser {
     this.accessToken.set(result.accessToken);
+    setIdleTimeoutMinutes(result.sessionIdleTimeoutMinutes);
+    recordActivity();
+    noteServerContact();
     const user: CurrentUser = {
       userId: result.userId,
       email: result.email,
@@ -145,6 +171,7 @@ export class AuthService {
   private clear(): void {
     this.accessToken.set(null);
     this.currentUser.set(null);
+    clearSessionActivity();
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(REFRESH_KEY);
       localStorage.removeItem(USER_KEY);

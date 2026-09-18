@@ -1,7 +1,8 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { BehaviorSubject, catchError, filter, switchMap, take, throwError } from 'rxjs';
+import { BehaviorSubject, catchError, filter, switchMap, take, tap, throwError } from 'rxjs';
+import { noteServerContact } from './session-activity';
 import { AuthService } from './auth.service';
 
 // Shared across concurrent requests so we only refresh once.
@@ -29,6 +30,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       : req;
 
   return next(withToken(auth.getAccessToken())).pipe(
+    // The server counts every signed-in request as activity, so the idle tracker only needs
+    // to send a heartbeat when the page has been quiet.
+    tap(() => noteServerContact()),
     catchError((error: HttpErrorResponse) => {
       // Only try to recover from 401s on non-auth endpoints, when we have a refresh token.
       if (error.status !== 401 || isAuthCall || !auth.getRefreshToken()) {
@@ -55,7 +59,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         }),
         catchError((refreshErr) => {
           isRefreshing = false;
-          auth.logout();
+          // The server refused to continue the session (idle too long, signed out elsewhere,
+          // password changed) -- say so on the login page.
+          auth.logout('expired');
           router.navigate(['/auth/login']);
           return throwError(() => refreshErr);
         }),

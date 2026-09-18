@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router } from '@angular/router';
 import { retry, throwError, timer } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { SignOutReason, idleTimeoutMinutes, takeSignOutReason } from '../../../../core/auth/session-activity';
 
 @Component({
   selector: 'app-login',
@@ -45,6 +46,11 @@ import { AuthService } from '../../../../core/auth/auth.service';
             </div>
             <h1 class="text-2xl font-bold text-neutral-900 mb-2">GKMPS School Portal</h1>
             <p class="text-neutral-600 text-sm">Sign in with the ID given to you by the school</p>
+          </div>
+
+          <!-- Why the user was signed out, when it wasn't their choice -->
+          <div *ngIf="signedOutMessage()" role="status" class="mb-4 p-3 rounded-lg border border-primary-200 bg-primary-50">
+            <p class="text-primary-800 text-sm">{{ signedOutMessage() }}</p>
           </div>
 
           <!-- Form -->
@@ -416,6 +422,7 @@ export class LoginComponent {
   isLoading = signal(false);
   showPassword = signal(false);
   errorMessage = signal('');
+  signedOutMessage = signal(this.describeSignOut(takeSignOutReason()));
   wakingServer = signal(false);
 
   toggleShowPassword(): void {
@@ -429,6 +436,12 @@ export class LoginComponent {
       loginId: ['', [Validators.required]],
       password: ['', [Validators.required]],
     });
+  }
+
+  private describeSignOut(reason: SignOutReason | null): string {
+    if (reason === 'idle') return `You were signed out after ${idleTimeoutMinutes()} minutes of inactivity. Please sign in again.`;
+    if (reason === 'expired') return 'Your session has ended. Please sign in again.';
+    return '';
   }
 
   isFieldInvalid(fieldName: string): boolean {
