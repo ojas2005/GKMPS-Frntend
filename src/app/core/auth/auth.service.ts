@@ -12,11 +12,41 @@ import {
 
 const REFRESH_KEY = 'gkmps.refreshToken';
 const USER_KEY = 'gkmps.user';
+// Set when the user ticked "Keep me signed in on this device".
+const REMEMBER_KEY = 'gkmps.remember';
+
+/**
+ * Where the sign-in is kept: sessionStorage by default, which the browser wipes when it
+ * closes -- so the next person on a shared school computer doesn't inherit the session --
+ * or localStorage when the user chose to stay signed in on their own device.
+ */
+function storages(): { local: Storage | null; session: Storage | null } {
+  try {
+    return {
+      local: typeof localStorage !== 'undefined' ? localStorage : null,
+      session: typeof sessionStorage !== 'undefined' ? sessionStorage : null,
+    };
+  } catch {
+    return { local: null, session: null };
+  }
+}
+function remembered(): boolean {
+  return storages().local?.getItem(REMEMBER_KEY) === '1';
+}
+function activeStore(): Storage | null {
+  const { local, session } = storages();
+  return remembered() ? local : session;
+}
+function readKey(key: string): string | null {
+  const { local, session } = storages();
+  return session?.getItem(key) ?? local?.getItem(key) ?? null;
+}
 
 /**
  * Holds auth state.
  *  - accessToken: in memory only (signal), per backend guidance (limits XSS blast radius)
- *  - refreshToken + user: localStorage so a page reload keeps the session
+ *  - refreshToken + user: sessionStorage (until the browser closes), or localStorage when
+ *    the user chose "Keep me signed in" -- either way a page reload keeps the session
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -49,7 +79,7 @@ export class AuthService {
   }
 
   getRefreshToken(): string | null {
-    return typeof localStorage !== 'undefined' ? localStorage.getItem(REFRESH_KEY) : null;
+    return readKey(REFRESH_KEY);
   }
 
   hasRole(...roles: string[]): boolean {
@@ -100,6 +130,10 @@ export class AuthService {
   }
 
   login(body: LoginRequest): Observable<LoginOutcome> {
+    // Decided now, so both the password step and the two-step code step store the same way.
+    const { local } = storages();
+    if (body.rememberMe) local?.setItem(REMEMBER_KEY, '1');
+    else local?.removeItem(REMEMBER_KEY);
     return this.http
       .post<ApiResponse<AuthResult>>(`${this.base}/api/auth/login`, body)
       .pipe(
@@ -199,29 +233,35 @@ export class AuthService {
       classTeacherOfSectionId: result.classTeacherOfSectionId ?? null,
       pendingAction: result.pendingAction ?? null,
     };
-    if (typeof localStorage !== 'undefined') localStorage.setItem(REFRESH_KEY, result.refreshToken);
+    const { local, session } = storages();
+    // Keep it in exactly one place: the chosen store.
+    (remembered() ? session : local)?.removeItem(REFRESH_KEY);
+    activeStore()?.setItem(REFRESH_KEY, result.refreshToken);
     this.storeUser(user);
     return user;
   }
 
   private storeUser(user: CurrentUser): void {
     this.currentUser.set(user);
-    if (typeof localStorage !== 'undefined') localStorage.setItem(USER_KEY, JSON.stringify(user));
+    const { local, session } = storages();
+    (remembered() ? session : local)?.removeItem(USER_KEY);
+    activeStore()?.setItem(USER_KEY, JSON.stringify(user));
   }
 
   private clear(): void {
     this.accessToken.set(null);
     this.currentUser.set(null);
     clearSessionActivity();
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(REFRESH_KEY);
-      localStorage.removeItem(USER_KEY);
+    const { local, session } = storages();
+    for (const store of [local, session]) {
+      store?.removeItem(REFRESH_KEY);
+      store?.removeItem(USER_KEY);
     }
+    local?.removeItem(REMEMBER_KEY);
   }
 
   private readStoredUser(): CurrentUser | null {
-    if (typeof localStorage === 'undefined') return null;
-    const raw = localStorage.getItem(USER_KEY);
+    const raw = readKey(USER_KEY);
     if (!raw) return null;
     try {
       return JSON.parse(raw) as CurrentUser;

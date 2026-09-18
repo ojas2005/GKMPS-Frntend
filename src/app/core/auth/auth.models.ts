@@ -36,6 +36,7 @@ export type LoginOutcome =
 export interface LoginRequest {
   loginId: string; // username (e.g. "ownerishim") or email
   password: string;
+  rememberMe?: boolean; // "Keep me signed in on this device"
 }
 
 export interface RefreshRequest {

@@ -121,6 +121,14 @@ import { SignOutReason, idleTimeoutMinutes, takeSignOutReason } from '../../../.
               </p>
             </div>
 
+            <!-- Shared school computers: stay signed in only when asked to -->
+            <label class="stagger flex items-start gap-2 text-sm text-neutral-700" style="--i: 3">
+              <input type="checkbox" formControlName="rememberMe" class="mt-0.5 h-4 w-4 rounded border-neutral-300">
+              <span>Keep me signed in on this device
+                <span class="block text-xs text-neutral-500">Only on your own phone or computer -- not on a shared or school computer.</span>
+              </span>
+            </label>
+
             <!-- Submit Button -->
             <button
               type="submit"
@@ -449,6 +457,7 @@ export class LoginComponent {
     this.loginForm = this.fb.group({
       loginId: ['', [Validators.required]],
       password: ['', [Validators.required]],
+      rememberMe: [false],
     });
   }
 
@@ -507,10 +516,10 @@ export class LoginComponent {
     this.isLoading.set(true);
     this.errorMessage.set('');
 
-    const { loginId, password } = this.loginForm.value;
+    const { loginId, password, rememberMe } = this.loginForm.value;
     this.wakingServer.set(false);
     this.auth
-      .login({ loginId: (loginId ?? '').trim(), password })
+      .login({ loginId: (loginId ?? '').trim(), password, rememberMe: !!rememberMe })
       .pipe(
         // The API scales to zero when idle; the first request after a quiet spell can fail
         // with no response (or a gateway 502-504) while it starts, so retry those for ~40s.
