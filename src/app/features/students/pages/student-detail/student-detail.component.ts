@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { openDownload } from '../../../../core/config/runtime-config';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -712,7 +713,7 @@ export class StudentDetailComponent implements OnInit {
 
   downloadReceipt(transactionId: string): void {
     this.feesService.receipt(transactionId).subscribe({
-      next: (link) => { if (link?.downloadUrl) window.open(link.downloadUrl, '_blank'); },
+      next: (link) => openDownload(link?.downloadUrl),
       error: () => {},
     });
   }

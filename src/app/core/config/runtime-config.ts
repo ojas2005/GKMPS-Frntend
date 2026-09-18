@@ -31,3 +31,14 @@ export async function loadRuntimeConfig(): Promise<void> {
 export function apiBaseUrl(): string {
   return config.apiBaseUrl;
 }
+
+/**
+ * Opens a download link from the API. File links are relative to the API ("/api/files/...")
+ * when the backend keeps files itself, so they're resolved against apiBaseUrl; absolute
+ * links (e.g. Azure Blob SAS URLs) open as they are.
+ */
+export function openDownload(url: string | null | undefined): void {
+  if (!url) return;
+  const target = url.startsWith('/') ? `${apiBaseUrl()}${url}` : url;
+  window.open(target, '_blank', 'noopener');
+}

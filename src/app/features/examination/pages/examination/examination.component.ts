@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { openDownload } from '../../../../core/config/runtime-config';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ExaminationService, Exam, StudentResult } from '../../examination.service';
@@ -165,7 +166,7 @@ export class ExaminationComponent implements OnInit {
     const id = this.auth.studentId();
     if (!id) return;
     this.service.reportCard(r.examId, id).subscribe({
-      next: (link: any) => { if (link?.downloadUrl) window.open(link.downloadUrl, '_blank'); },
+      next: (link: any) => openDownload(link?.downloadUrl),
       error: (err) => this.resultsError.set(this.msg(err, 'Could not generate the report card.')),
     });
   }
