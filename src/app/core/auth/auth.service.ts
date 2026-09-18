@@ -1,8 +1,8 @@
 import { Injectable, NgZone, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, switchMap, tap, throwError, timer } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { apiBaseUrl } from '../config/runtime-config';
 import { ApiResponse } from '../models/api-response';
 import { AuthResult, CurrentUser, LoginRequest, RefreshRequest } from './auth.models';
@@ -113,11 +113,12 @@ export class AuthService {
   }
 
   // Called by the interceptor on a 401.
-  refresh(): Observable<string> {
+  refresh(isRetry = false): Observable<string> {
+    const sent = this.getRefreshToken() ?? '';
     // After a page reload the in-memory access token is gone; the refresh token alone is
     // enough for the backend, so only send the access token when we still have one.
     const body: RefreshRequest = {
-      refreshToken: this.getRefreshToken() ?? '',
+      refreshToken: sent,
       ...(this.accessToken() ? { accessToken: this.accessToken()! } : {}),
     };
     return this.http
@@ -126,6 +127,19 @@ export class AuthService {
         map((r) => r.data!),
         tap((result) => this.applyAuth(result)),
         map((result) => result.accessToken),
+        // Each refresh token can be used once. If another tab of this browser used it at the
+        // same moment, the server refuses this tab -- but that tab stores the new token a
+        // moment later, and this one can simply carry on with it.
+        catchError((err) =>
+          isRetry
+            ? throwError(() => err)
+            : timer(1500).pipe(
+                switchMap(() => {
+                  const now = this.getRefreshToken();
+                  return now && now !== sent ? this.refresh(true) : throwError(() => err);
+                }),
+              ),
+        ),
       );
   }
 
