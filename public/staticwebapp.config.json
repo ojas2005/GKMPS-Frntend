@@ -1,17 +1,23 @@
 {
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/*.{js,css,json,svg,png,jpg,jpeg,gif,ico,webp,woff,woff2,txt,map}"]
+    "exclude": [
+      "/*.{js,css,json,svg,png,jpg,jpeg,gif,ico,webp,woff,woff2,txt,map}"
+    ]
   },
   "globalHeaders": {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
-    "Referrer-Policy": "strict-origin-when-cross-origin"
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://gkmps-api.salmonpebble-295fb50e.koreacentral.azurecontainerapps.io; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
   },
   "routes": [
     {
       "route": "/config.json",
-      "headers": { "Cache-Control": "no-store" }
+      "headers": {
+        "Cache-Control": "no-store"
+      }
     }
   ]
 }
