@@ -641,6 +641,13 @@ main {
   .text-success-700, .text-success-800, .text-success-900 { color: #86efac !important; }
   :not(nav *).text-primary-800, :not(nav *).text-primary-900 { color: #7dd3fc !important; }
 
+  /* Coloured text (amounts due, "paid", links) is tuned for white; on the dark surface the
+     same shades fall below the 4.5:1 contrast minimum, so use the lighter ones. */
+  .text-error-500, .text-error-600     { color: #f87171 !important; }
+  .text-success-500, .text-success-600 { color: #4ade80 !important; }
+  .text-warning-500, .text-warning-600 { color: #fbbf24 !important; }
+  :not(nav *).text-primary-600, :not(nav *).text-primary-700 { color: #38bdf8 !important; }
+
   /* Toast accent stripe: the generic `.border-neutral-200 { border-color: !important }`
      above would otherwise flatten the coloured left border to grey, so re-assert the
      per-kind accent with a more specific selector. */

@@ -71,10 +71,10 @@ import { SignOutReason, idleTimeoutMinutes, takeSignOutReason } from '../../../.
           <form *ngIf="!challenge()" [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-4">
             <!-- Login ID Input -->
             <div class="stagger" style="--i: 1">
-              <label class="block text-sm font-medium text-neutral-900 mb-2">
+              <label class="block text-sm font-medium text-neutral-900 mb-2" for="login-f1">
                 Login ID
               </label>
-              <input
+              <input id="login-f1"
                 type="text"
                 formControlName="loginId"
                 placeholder="Your login ID (or email)"

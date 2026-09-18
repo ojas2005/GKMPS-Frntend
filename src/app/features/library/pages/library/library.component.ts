@@ -41,24 +41,24 @@ import { classNameById, sectionNameById } from '../../../../core/constants/class
         <div *ngIf="showForm()" class="bg-white rounded-xl p-6 shadow-sm border border-neutral-200">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs text-neutral-500 mb-1">ISBN *</label>
-              <input [(ngModel)]="form.isbn" placeholder="9780140328721" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+              <label class="block text-xs text-neutral-500 mb-1" for="library-f1">ISBN *</label>
+              <input id="library-f1" [(ngModel)]="form.isbn" placeholder="9780140328721" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
             </div>
             <div>
-              <label class="block text-xs text-neutral-500 mb-1">Title *</label>
-              <input [(ngModel)]="form.title" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+              <label class="block text-xs text-neutral-500 mb-1" for="library-f2">Title *</label>
+              <input id="library-f2" [(ngModel)]="form.title" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
             </div>
             <div>
-              <label class="block text-xs text-neutral-500 mb-1">Author *</label>
-              <input [(ngModel)]="form.author" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+              <label class="block text-xs text-neutral-500 mb-1" for="library-f3">Author *</label>
+              <input id="library-f3" [(ngModel)]="form.author" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
             </div>
             <div>
-              <label class="block text-xs text-neutral-500 mb-1">Category *</label>
-              <input [(ngModel)]="form.category" placeholder="Fiction" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+              <label class="block text-xs text-neutral-500 mb-1" for="library-f4">Category *</label>
+              <input id="library-f4" [(ngModel)]="form.category" placeholder="Fiction" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
             </div>
             <div>
-              <label class="block text-xs text-neutral-500 mb-1">Total copies *</label>
-              <input [(ngModel)]="form.totalCopies" type="number" min="1" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+              <label class="block text-xs text-neutral-500 mb-1" for="library-f5">Total copies *</label>
+              <input id="library-f5" [(ngModel)]="form.totalCopies" type="number" min="1" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
             </div>
           </div>
           <div class="mt-4 flex items-center gap-3">
@@ -103,8 +103,8 @@ import { classNameById, sectionNameById } from '../../../../core/constants/class
           <h2 class="font-semibold text-neutral-900">Issue a book</h2>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label class="block text-xs text-neutral-500 mb-1">Book *</label>
-              <select [(ngModel)]="issue.bookId" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
+              <label class="block text-xs text-neutral-500 mb-1" for="library-f6">Book *</label>
+              <select id="library-f6" [(ngModel)]="issue.bookId" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
                 <option value="">Select a book</option>
                 <option *ngFor="let b of rows()" [value]="b.id" [disabled]="!b.availableCopies">
                   {{ b.title }} ({{ b.availableCopies }} available)

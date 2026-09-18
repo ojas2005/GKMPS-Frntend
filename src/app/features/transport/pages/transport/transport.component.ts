@@ -23,20 +23,20 @@ import { TransportService, TransportRoute } from '../../transport.service';
       <div *ngIf="showForm()" class="bg-white rounded-xl p-6 shadow-sm border border-neutral-200">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Route name *</label>
-            <input [(ngModel)]="form.name" placeholder="Route 1 — North" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="transport-f1">Route name *</label>
+            <input id="transport-f1" [(ngModel)]="form.name" placeholder="Route 1 — North" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Monthly fee *</label>
-            <input [(ngModel)]="form.monthlyFee" type="number" placeholder="1500" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="transport-f2">Monthly fee *</label>
+            <input id="transport-f2" [(ngModel)]="form.monthlyFee" type="number" placeholder="1500" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Start point *</label>
-            <input [(ngModel)]="form.startPoint" placeholder="Depot" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="transport-f3">Start point *</label>
+            <input id="transport-f3" [(ngModel)]="form.startPoint" placeholder="Depot" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">End point *</label>
-            <input [(ngModel)]="form.endPoint" placeholder="Sector 15" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="transport-f4">End point *</label>
+            <input id="transport-f4" [(ngModel)]="form.endPoint" placeholder="Sector 15" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
         </div>
         <div class="mt-4 flex items-center gap-3">

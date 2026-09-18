@@ -27,7 +27,7 @@ const rank = (role?: string | null) => (role ? RANK[role] ?? 0 : 0);
       </div>
 
       <div class="flex flex-wrap gap-3">
-        <select [(ngModel)]="role" (change)="search()" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
+        <select [(ngModel)]="role" aria-label="Filter by role" (change)="search()" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
           <option value="">All roles</option>
           <option *ngFor="let r of roles" [value]="r">{{ r }}</option>
         </select>

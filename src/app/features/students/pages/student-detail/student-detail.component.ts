@@ -75,50 +75,50 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
               <p class="text-xs text-neutral-500 mb-3">Everything collected at admission. Login ID and password aren't changed here — use "Reset login password" below for that.</p>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Full name *</label>
-                  <input [(ngModel)]="editForm.fullName" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f1">Full name *</label>
+                  <input id="student-detail-f1" [(ngModel)]="editForm.fullName" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Admission number *</label>
-                  <input [(ngModel)]="editForm.admissionNumber" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f2">Admission number *</label>
+                  <input id="student-detail-f2" [(ngModel)]="editForm.admissionNumber" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Date of birth *</label>
-                  <input [(ngModel)]="editForm.dateOfBirth" type="date" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f3">Date of birth *</label>
+                  <input id="student-detail-f3" [(ngModel)]="editForm.dateOfBirth" type="date" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Gender *</label>
-                  <select [(ngModel)]="editForm.gender" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f4">Gender *</label>
+                  <select id="student-detail-f4" [(ngModel)]="editForm.gender" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
                     <option>Male</option><option>Female</option><option>Other</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Class *</label>
-                  <select [(ngModel)]="editForm.classId" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f5">Class *</label>
+                  <select id="student-detail-f5" [(ngModel)]="editForm.classId" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
                     <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Section *</label>
-                  <select [(ngModel)]="editForm.sectionId" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f6">Section *</label>
+                  <select id="student-detail-f6" [(ngModel)]="editForm.sectionId" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
                     <option *ngFor="let sec of sections" [value]="sec.id">Section {{ sec.name }}</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Guardian name</label>
-                  <input [(ngModel)]="editForm.parentName" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f7">Guardian name</label>
+                  <input id="student-detail-f7" [(ngModel)]="editForm.parentName" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Guardian phone</label>
-                  <input [(ngModel)]="editForm.parentPhone" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f8">Guardian phone</label>
+                  <input id="student-detail-f8" [(ngModel)]="editForm.parentPhone" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Guardian email</label>
-                  <input [(ngModel)]="editForm.parentEmail" type="email" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f9">Guardian email</label>
+                  <input id="student-detail-f9" [(ngModel)]="editForm.parentEmail" type="email" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Address</label>
-                  <input [(ngModel)]="editForm.address" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f10">Address</label>
+                  <input id="student-detail-f10" [(ngModel)]="editForm.address" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
               </div>
               <div class="mt-3 flex items-center gap-3">
@@ -140,8 +140,8 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
                   <p class="text-xs text-neutral-500 mb-3">An existing password can never be shown again once set (it's stored one-way hashed, same as everywhere else) — set a new one here and it'll be displayed once, right above, so you can hand it over. This signs the student out everywhere.</p>
                   <div class="flex flex-wrap items-end gap-3">
                     <div>
-                      <label class="block text-xs text-neutral-500 mb-1">New password (min 10 chars) *</label>
-                      <input [(ngModel)]="newPassword" type="text" placeholder="e.g. mango river lantern" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                      <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f11">New password (min 10 chars) *</label>
+                      <input id="student-detail-f11" [(ngModel)]="newPassword" type="text" placeholder="e.g. mango river lantern" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                     </div>
                     <button (click)="resetPassword(s)" [disabled]="settingPassword()"
                       class="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">
@@ -169,8 +169,8 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
               </div>
               <div class="mt-2 flex flex-wrap items-end gap-3">
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">New parent password</label>
-                  <input [(ngModel)]="parentNewPassword" type="text" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f12">New parent password</label>
+                  <input id="student-detail-f12" [(ngModel)]="parentNewPassword" type="text" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <button (click)="resetParentPassword(s)" [disabled]="parentBusy()"
                   class="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50 disabled:text-neutral-400">Reset password</button>
@@ -182,12 +182,12 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
               <p class="text-xs text-neutral-500 mb-2">No parent login yet. Create one so the parent can follow attendance, results and fees.</p>
               <div class="flex flex-wrap items-end gap-3">
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Parent login ID *</label>
-                  <input [(ngModel)]="parentForm.username" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f13">Parent login ID *</label>
+                  <input id="student-detail-f13" [(ngModel)]="parentForm.username" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Password (min 10 chars) *</label>
-                  <input [(ngModel)]="parentForm.password" type="text" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f14">Password (min 10 chars) *</label>
+                  <input id="student-detail-f14" [(ngModel)]="parentForm.password" type="text" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <button (click)="createParentLogin(s)" [disabled]="parentBusy()"
                   class="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">
@@ -234,8 +234,8 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
               <h3 class="text-sm font-semibold text-neutral-900 mb-3">Record a payment</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div class="md:col-span-2">
-                  <label class="block text-xs text-neutral-500 mb-1">What is this payment for? *</label>
-                  <select [(ngModel)]="payForm.target" (ngModelChange)="onTargetChange()" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f15">What is this payment for? *</label>
+                  <select id="student-detail-f15" [(ngModel)]="payForm.target" (ngModelChange)="onTargetChange()" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
                     <option *ngFor="let d of outstandingDues()" [ngValue]="d.id">
                       {{ d['feeStructureName'] || d['description'] || 'Fee' }} — ₹{{ pending(d) }} pending
                     </option>
@@ -244,13 +244,13 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
                 </div>
 
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Amount (₹) *</label>
-                  <input [(ngModel)]="payForm.amount" type="number" min="0.01" [max]="selectedDuePending()" placeholder="5000" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
-                  <p *ngIf="payForm.target !== 'new' && selectedDuePending() !== null" class="text-xs text-neutral-400 mt-1">Up to ₹{{ selectedDuePending() }} outstanding on this fee.</p>
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f16">Amount (₹) *</label>
+                  <input id="student-detail-f16" [(ngModel)]="payForm.amount" type="number" min="0.01" [max]="selectedDuePending()" placeholder="5000" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <p *ngIf="payForm.target !== 'new' && selectedDuePending() !== null" class="text-xs text-neutral-500 mt-1">Up to ₹{{ selectedDuePending() }} outstanding on this fee.</p>
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Payment method</label>
-                  <select [(ngModel)]="payForm.paymentMethod" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f17">Payment method</label>
+                  <select id="student-detail-f17" [(ngModel)]="payForm.paymentMethod" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
                     <option>Cash</option><option>Card</option><option>UPI</option><option>BankTransfer</option>
                   </select>
                 </div>
@@ -258,8 +258,8 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
                 <!-- A new charge needs its own description + period; paying an existing due does not. -->
                 <ng-container *ngIf="payForm.target === 'new'">
                   <div class="md:col-span-2">
-                    <label class="block text-xs text-neutral-500 mb-1">Description *</label>
-                    <input [(ngModel)]="payForm.description" placeholder="e.g. Tuition fee, exam fee" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                    <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f18">Description *</label>
+                    <input id="student-detail-f18" [(ngModel)]="payForm.description" placeholder="e.g. Tuition fee, exam fee" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                   </div>
                   <div class="md:col-span-2">
                     <label class="block text-xs text-neutral-500 mb-1">Fee duration *</label>
@@ -270,7 +270,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
                       <select [(ngModel)]="payForm.startYear" class="px-2 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
                         <option *ngFor="let y of years" [ngValue]="y">{{ y }}</option>
                       </select>
-                      <span class="text-neutral-400 text-xs">to</span>
+                      <span class="text-neutral-500 text-xs">to</span>
                       <select [(ngModel)]="payForm.endMonth" class="px-2 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
                         <option *ngFor="let m of months" [ngValue]="m.value">{{ m.label }}</option>
                       </select>
@@ -436,7 +436,7 @@ export class StudentDetailComponent implements OnInit {
   selectedDuePending = (): number | null => { const d = this.selectedDue(); return d ? this.pending(d) : null; };
   pctClass = (): string => {
     const p = this.attendancePct();
-    return p === null ? 'text-neutral-400' : p >= 75 ? 'text-success-600' : 'text-error-600';
+    return p === null ? 'text-neutral-500' : p >= 75 ? 'text-success-600' : 'text-error-600';
   };
 
   private id = '';

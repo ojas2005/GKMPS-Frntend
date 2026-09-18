@@ -41,8 +41,8 @@ import { SCHOOL_CLASSES, classNameById } from '../../../../core/constants/classe
       <div class="bg-white rounded-xl p-6 shadow-sm border border-neutral-200">
         <h2 class="text-lg font-semibold text-neutral-900 mb-4">Fee collection</h2>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-          <input [(ngModel)]="fromDate" type="date" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
-          <input [(ngModel)]="toDate" type="date" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+          <input [(ngModel)]="fromDate" type="date" aria-label="From date" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+          <input [(ngModel)]="toDate" type="date" aria-label="To date" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           <button (click)="loadFees()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium">Run</button>
           <div class="text-2xl font-bold text-neutral-900">{{ feeTotal() !== null ? ('₹' + feeTotal()) : '—' }}</div>
         </div>

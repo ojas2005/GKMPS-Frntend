@@ -44,57 +44,57 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
         <p class="text-xs text-neutral-500 mb-4">You set the login ID &amp; password and give them to the teacher. Fields marked * are required.</p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Full name *</label>
-            <input [(ngModel)]="form.fullName" placeholder="Meera Nair" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="teachers-f1">Full name *</label>
+            <input id="teachers-f1" [(ngModel)]="form.fullName" placeholder="Meera Nair" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Designation *</label>
-            <input [(ngModel)]="form.designation" placeholder="Teacher" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="teachers-f2">Designation *</label>
+            <input id="teachers-f2" [(ngModel)]="form.designation" placeholder="Teacher" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Login role *</label>
-            <select [(ngModel)]="form.role" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
+            <label class="block text-xs text-neutral-500 mb-1" for="teachers-f3">Login role *</label>
+            <select id="teachers-f3" [(ngModel)]="form.role" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
               <option *ngFor="let r of roleOptions" [value]="r">{{ r }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Employee code</label>
-            <input [(ngModel)]="form.employeeCode" placeholder="auto-generated if blank" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="teachers-f4">Employee code</label>
+            <input id="teachers-f4" [(ngModel)]="form.employeeCode" placeholder="auto-generated if blank" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Login ID * (give this to the teacher)</label>
-            <input [(ngModel)]="form.username" placeholder="e.g. meera.t" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="teachers-f5">Login ID * (give this to the teacher)</label>
+            <input id="teachers-f5" [(ngModel)]="form.username" placeholder="e.g. meera.t" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Password * (min 10 characters)</label>
-            <input [(ngModel)]="form.password" placeholder="e.g. mango river lantern" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="teachers-f6">Password * (min 10 characters)</label>
+            <input id="teachers-f6" [(ngModel)]="form.password" placeholder="e.g. mango river lantern" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Subjects taught (CSV)</label>
-            <input [(ngModel)]="form.subjectsTaughtCsv" placeholder="Mathematics,Science" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="teachers-f7">Subjects taught (CSV)</label>
+            <input id="teachers-f7" [(ngModel)]="form.subjectsTaughtCsv" placeholder="Mathematics,Science" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Phone</label>
-            <input [(ngModel)]="form.phone" placeholder="Optional" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="teachers-f8">Phone</label>
+            <input id="teachers-f8" [(ngModel)]="form.phone" placeholder="Optional" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Class teacher (head teacher) of</label>
-            <select [(ngModel)]="form.classTeacherOfClassId" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
+            <label class="block text-xs text-neutral-500 mb-1" for="teachers-f9">Class teacher (head teacher) of</label>
+            <select id="teachers-f9" [(ngModel)]="form.classTeacherOfClassId" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
               <option value="">Not a class teacher</option>
               <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Section (if class teacher)</label>
-            <select [(ngModel)]="form.classTeacherOfSectionId" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
+            <label class="block text-xs text-neutral-500 mb-1" for="teachers-f10">Section (if class teacher)</label>
+            <select id="teachers-f10" [(ngModel)]="form.classTeacherOfSectionId" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
               <option value="">—</option>
               <option *ngFor="let s of sections" [value]="s.id">Section {{ s.name }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Monthly salary (₹)</label>
-            <input [(ngModel)]="form.monthlySalary" type="number" min="0" placeholder="e.g. 35000" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
-            <p class="text-xs text-neutral-400 mt-1">Drives their pending-salary readout each month; editable later on their detail page.</p>
+            <label class="block text-xs text-neutral-500 mb-1" for="teachers-f11">Monthly salary (₹)</label>
+            <input id="teachers-f11" [(ngModel)]="form.monthlySalary" type="number" min="0" placeholder="e.g. 35000" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <p class="text-xs text-neutral-500 mt-1">Drives their pending-salary readout each month; editable later on their detail page.</p>
           </div>
         </div>
         <p class="text-xs text-neutral-500 mt-2">Only the class teacher of a class can upload that class's attendance and view its students.</p>
@@ -132,7 +132,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
                 <span *ngIf="s.classTeacherOfClassId" class="px-2 py-1 bg-primary-50 text-primary-700 rounded-full text-xs font-medium">
                   {{ className(s.classTeacherOfClassId!) }}{{ s.classTeacherOfSectionId ? ' - ' + sectionName(s.classTeacherOfSectionId!) : '' }}
                 </span>
-                <span *ngIf="!s.classTeacherOfClassId" class="text-neutral-400">—</span>
+                <span *ngIf="!s.classTeacherOfClassId" class="text-neutral-500">—</span>
               </td>
               <td class="px-6 py-3 text-neutral-600">{{ s.email || '—' }}</td>
               <td class="px-6 py-3 text-primary-600 text-right text-xs font-medium">View details →</td>

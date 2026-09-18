@@ -77,19 +77,19 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
             <div *ngFor="let row of rows(group.key); let i = index" class="border-t border-neutral-100 py-3">
               <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
                 <div class="md:col-span-3">
-                  <label class="block text-xs text-neutral-500 mb-1">Teacher *</label>
-                  <select [(ngModel)]="row.staffId" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+                  <label class="block text-xs text-neutral-500 mb-1" for="timetable-f1">Teacher *</label>
+                  <select id="timetable-f1" [(ngModel)]="row.staffId" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
                     <option value="">— pick —</option>
                     <option *ngFor="let t of teachers()" [value]="t.id">{{ t.fullName }}</option>
                   </select>
                 </div>
                 <div class="md:col-span-3">
-                  <label class="block text-xs text-neutral-500 mb-1">Subject *</label>
-                  <input [(ngModel)]="row.subjectName" placeholder="e.g. Mathematics" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="timetable-f2">Subject *</label>
+                  <input id="timetable-f2" [(ngModel)]="row.subjectName" placeholder="e.g. Mathematics" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <div class="md:col-span-2">
-                  <label class="block text-xs text-neutral-500 mb-1">Max periods/day *</label>
-                  <input [(ngModel)]="row.maxPeriodsPerDay" type="number" min="1" max="8" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="timetable-f3">Max periods/day *</label>
+                  <input id="timetable-f3" [(ngModel)]="row.maxPeriodsPerDay" type="number" min="1" max="8" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <div class="md:col-span-3">
                   <label class="block text-xs text-neutral-500 mb-1">Classes taught</label>
@@ -207,7 +207,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
                 <tr class="border-t border-neutral-100">
                   <td class="py-2 font-medium text-neutral-900">P{{ s.period }}</td>
                   <td class="py-2 text-neutral-600">{{ s.startTime }} - {{ s.endTime }}</td>
-                  <td class="py-2" [class]="s.classId ? 'text-neutral-900 font-medium' : 'text-neutral-400'">
+                  <td class="py-2" [class]="s.classId ? 'text-neutral-900 font-medium' : 'text-neutral-500'">
                     {{ s.classId ? className(s.classId) + ' - ' + sectionName(s.sectionId) : '— free —' }}
                   </td>
                   <td class="py-2 text-neutral-600">{{ s.subjectName || '—' }}</td>

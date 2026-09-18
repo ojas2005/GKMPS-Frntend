@@ -50,8 +50,8 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
               <p class="text-xs text-neutral-500 mb-3">Passwords are stored hashed and cannot be viewed — set a new one and hand it to the teacher. This signs them out everywhere.</p>
               <div class="flex flex-wrap items-end gap-3">
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">New password (min 10 chars) *</label>
-                  <input [(ngModel)]="newPassword" type="text" placeholder="e.g. mango river lantern" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="teacher-detail-f1">New password (min 10 chars) *</label>
+                  <input id="teacher-detail-f1" [(ngModel)]="newPassword" type="text" placeholder="e.g. mango river lantern" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <button (click)="resetPassword(s)" [disabled]="settingPassword()"
                   class="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">
@@ -91,8 +91,8 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
           <p class="text-xs text-neutral-500 mb-4">Pending resets to the full monthly salary at the start of each month, minus whatever's paid out below.</p>
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <div>
-              <label class="block text-xs text-neutral-500 mb-1">Monthly salary (₹)</label>
-              <input [(ngModel)]="salaryInput" type="number" min="0" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+              <label class="block text-xs text-neutral-500 mb-1" for="teacher-detail-f2">Monthly salary (₹)</label>
+              <input id="teacher-detail-f2" [(ngModel)]="salaryInput" type="number" min="0" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
             </div>
             <button (click)="saveSalary()" [disabled]="savingSalary()"
               class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">

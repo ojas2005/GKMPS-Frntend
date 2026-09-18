@@ -59,7 +59,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
                 </span>
               </div>
               <p *ngIf="s.syllabusOutline && editingSyllabus !== s.id" class="text-xs text-neutral-600 mt-1 whitespace-pre-line">{{ s.syllabusOutline }}</p>
-              <p *ngIf="!s.syllabusOutline && editingSyllabus !== s.id" class="text-xs text-neutral-400 mt-1">No syllabus added yet.</p>
+              <p *ngIf="!s.syllabusOutline && editingSyllabus !== s.id" class="text-xs text-neutral-500 mt-1">No syllabus added yet.</p>
               <div *ngIf="editingSyllabus === s.id" class="mt-2 space-y-2 reveal-panel">
                 <textarea [(ngModel)]="syllabusDraft" rows="4" placeholder="Chapters / topics / marking scheme..."
                   class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm"></textarea>
