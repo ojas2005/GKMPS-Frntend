@@ -66,8 +66,8 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
             <input [(ngModel)]="form.username" placeholder="e.g. meera.t" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Password * (min 8 characters)</label>
-            <input [(ngModel)]="form.password" placeholder="e.g. Teacher@123" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1">Password * (min 10 characters)</label>
+            <input [(ngModel)]="form.password" placeholder="e.g. mango river lantern" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
             <label class="block text-xs text-neutral-500 mb-1">Subjects taught (CSV)</label>
@@ -188,8 +188,8 @@ export class TeachersComponent implements OnInit {
 
   save(): void {
     if (!this.form.fullName || !this.form.designation) { this.formError.set('Name and designation are required.'); return; }
-    if (!this.form.username.trim() || (this.form.password ?? '').length < 8) {
-      this.formError.set('A login ID and a password of at least 8 characters are required.'); return;
+    if (!this.form.username.trim() || (this.form.password ?? '').length < 10) {
+      this.formError.set('A login ID and a password of at least 10 characters are required.'); return;
     }
     if (!!this.form.classTeacherOfClassId !== !!this.form.classTeacherOfSectionId) {
       this.formError.set('Pick both class AND section for a class teacher (or neither).'); return;

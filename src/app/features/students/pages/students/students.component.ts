@@ -85,8 +85,8 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classN
             <input [(ngModel)]="form.username" placeholder="e.g. aarav2026" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Password * (min 8 characters)</label>
-            <input [(ngModel)]="form.password" placeholder="e.g. Student@123" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1">Password * (min 10 characters)</label>
+            <input [(ngModel)]="form.password" placeholder="e.g. mango river lantern" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
             <label class="block text-xs text-neutral-500 mb-1">Parent name</label>
@@ -109,7 +109,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classN
             <input [(ngModel)]="form.parentUsername" placeholder="e.g. aarav2026.parent" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Parent password (min 8 characters)</label>
+            <label class="block text-xs text-neutral-500 mb-1">Parent password (min 10 characters)</label>
             <input [(ngModel)]="form.parentPassword" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
@@ -222,12 +222,12 @@ export class StudentsComponent implements OnInit {
       this.formError.set('Full name, date of birth, gender, class and section are required.');
       return;
     }
-    if (!this.form.username.trim() || (this.form.password ?? '').length < 8) {
-      this.formError.set('A login ID and a password of at least 8 characters are required.');
+    if (!this.form.username.trim() || (this.form.password ?? '').length < 10) {
+      this.formError.set('A login ID and a password of at least 10 characters are required.');
       return;
     }
-    if (this.form.parentUsername?.trim() && (this.form.parentPassword ?? '').length < 8) {
-      this.formError.set('The parent login needs a password of at least 8 characters.');
+    if (this.form.parentUsername?.trim() && (this.form.parentPassword ?? '').length < 10) {
+      this.formError.set('The parent login needs a password of at least 10 characters.');
       return;
     }
     this.saving.set(true);

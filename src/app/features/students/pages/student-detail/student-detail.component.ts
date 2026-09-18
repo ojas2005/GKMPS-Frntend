@@ -140,8 +140,8 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
                   <p class="text-xs text-neutral-500 mb-3">An existing password can never be shown again once set (it's stored one-way hashed, same as everywhere else) — set a new one here and it'll be displayed once, right above, so you can hand it over. This signs the student out everywhere.</p>
                   <div class="flex flex-wrap items-end gap-3">
                     <div>
-                      <label class="block text-xs text-neutral-500 mb-1">New password (min 8 chars) *</label>
-                      <input [(ngModel)]="newPassword" type="text" placeholder="e.g. Student@456" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                      <label class="block text-xs text-neutral-500 mb-1">New password (min 10 chars) *</label>
+                      <input [(ngModel)]="newPassword" type="text" placeholder="e.g. mango river lantern" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                     </div>
                     <button (click)="resetPassword(s)" [disabled]="settingPassword()"
                       class="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">
@@ -186,7 +186,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
                   <input [(ngModel)]="parentForm.username" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Password (min 8 chars) *</label>
+                  <label class="block text-xs text-neutral-500 mb-1">Password (min 10 chars) *</label>
                   <input [(ngModel)]="parentForm.password" type="text" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <button (click)="createParentLogin(s)" [disabled]="parentBusy()"
@@ -635,8 +635,8 @@ export class StudentDetailComponent implements OnInit {
   resetPassword(s: Student): void {
     const linkedUserId = s.linkedUserId;
     if (!linkedUserId) { this.passwordOk.set(false); this.passwordMsg.set('This student has no linked login account.'); return; }
-    if (!this.newPassword || this.newPassword.length < 8) {
-      this.passwordOk.set(false); this.passwordMsg.set('Password must be at least 8 characters.');
+    if (!this.newPassword || this.newPassword.length < 10) {
+      this.passwordOk.set(false); this.passwordMsg.set('Password must be at least 10 characters.');
       return;
     }
     this.settingPassword.set(true); this.passwordMsg.set('');
@@ -665,8 +665,8 @@ export class StudentDetailComponent implements OnInit {
   createParentLogin(s: Student): void {
     const username = this.parentForm.username.trim();
     const password = this.parentForm.password;
-    if (!username || password.length < 8) {
-      this.parentMsg.set('Enter a login ID and a password of at least 8 characters.'); return;
+    if (!username || password.length < 10) {
+      this.parentMsg.set('Enter a login ID and a password of at least 10 characters.'); return;
     }
     this.parentBusy.set(true); this.parentMsg.set('');
     this.studentsService.createParentLogin(s, username, password).subscribe({
@@ -685,7 +685,7 @@ export class StudentDetailComponent implements OnInit {
   resetParentPassword(s: Student): void {
     if (!s.parentUserId) return;
     const password = this.parentNewPassword;
-    if (password.length < 8) { this.parentMsg.set('Password must be at least 8 characters.'); return; }
+    if (password.length < 10) { this.parentMsg.set('Password must be at least 10 characters.'); return; }
     this.parentBusy.set(true); this.parentMsg.set('');
     this.usersService.setPassword(s.parentUserId, password).subscribe({
       next: () => {

@@ -82,7 +82,7 @@ const rank = (role?: string | null) => (role ? RANK[role] ?? 0 : 0);
               <tr *ngIf="resetFor() === u.id" class="bg-neutral-50">
                 <td colspan="6" class="px-6 py-3">
                   <div class="flex flex-wrap items-center gap-3">
-                    <input [(ngModel)]="newPassword" type="text" placeholder="New password (min 8 characters)" class="w-64 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                    <input [(ngModel)]="newPassword" type="text" placeholder="New password (min 10 characters)" class="w-64 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                     <button (click)="resetPassword(u)" [disabled]="busyId() === u.id" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm">Set password</button>
                     <span class="text-xs text-neutral-500">Signs them out everywhere.</span>
                   </div>
