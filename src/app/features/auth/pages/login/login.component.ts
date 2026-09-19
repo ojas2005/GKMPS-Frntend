@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { retry, throwError, timer } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { SignOutReason, idleTimeoutMinutes, takeSignOutReason } from '../../../../core/auth/session-activity';
@@ -9,7 +9,7 @@ import { SignOutReason, idleTimeoutMinutes, takeSignOutReason } from '../../../.
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
   template: `
     <div class="login-page min-h-screen relative overflow-hidden flex items-center justify-center px-4">
       <!-- Deep gradient base -->
@@ -158,7 +158,8 @@ import { SignOutReason, idleTimeoutMinutes, takeSignOutReason } from '../../../.
 
         <!-- Footer -->
         <p class="stagger text-center text-white/70 text-sm mt-6" style="--i: 5">
-          &copy; 2026 GKMPS School Portal
+          &copy; 2026 GKMPS School Portal &middot;
+          <a routerLink="/privacy" class="underline hover:text-white">Privacy notice</a>
         </p>
       </div>
     </div>

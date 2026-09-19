@@ -340,6 +340,43 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
             </span>
           </div>
         </div>
+
+        <!-- Right to erasure: only once the student has left -->
+        <div *ngIf="canErase() && s.status === 'TransferredOut'" class="bg-white rounded-xl shadow-sm border border-error-200 p-6">
+          <h2 class="text-lg font-semibold text-neutral-900">Erase personal data</h2>
+          <p class="text-sm text-neutral-600 mt-1">
+            {{ s.fullName }} has left the school. If the family asks, you can erase their personal
+            details. This removes the name, date of birth, gender, address and parent contacts. It
+            closes the student's login, and the parent's too unless a brother or sister still uses
+            it. Transfer certificates and report cards are deleted. Marks, attendance and fee
+            records stay, under the admission number only. <strong>This can't be undone.</strong>
+          </p>
+          <ng-container *ngIf="!showErase(); else eraseForm">
+            <button type="button" (click)="showErase.set(true)"
+              class="mt-4 px-4 py-2 rounded-lg border border-error-300 text-error-700 text-sm font-medium hover:bg-error-50">
+              Erase personal data…
+            </button>
+          </ng-container>
+          <ng-template #eraseForm>
+            <label for="erase-confirm" class="block text-sm text-neutral-700 mt-4">
+              Type the admission number <span class="font-mono font-semibold">{{ s.admissionNumber }}</span> to confirm
+            </label>
+            <input id="erase-confirm" [(ngModel)]="eraseConfirm" autocomplete="off"
+              class="mt-1 w-full max-w-xs px-3 py-2 border border-neutral-300 rounded-lg text-sm font-mono">
+            <div class="flex gap-2 mt-3">
+              <button type="button" (click)="erase(s)" [disabled]="erasing() || !eraseMatches(s)"
+                class="px-4 py-2 rounded-lg bg-error-600 text-white text-sm font-medium hover:bg-error-700 disabled:opacity-50">
+                {{ erasing() ? 'Erasing…' : 'Erase permanently' }}
+              </button>
+              <button type="button" (click)="showErase.set(false); eraseConfirm = ''"
+                class="px-4 py-2 rounded-lg border border-neutral-300 text-neutral-700 text-sm">Cancel</button>
+            </div>
+            <p *ngIf="eraseMsg()" class="text-sm text-error-600 mt-2" role="alert">{{ eraseMsg() }}</p>
+          </ng-template>
+        </div>
+        <p *ngIf="s.status === 'Erased'" class="text-sm text-neutral-500">
+          This former student's personal data has been erased.
+        </p>
       </ng-container>
     </div>
   `,
@@ -390,6 +427,11 @@ export class StudentDetailComponent implements OnInit {
 
   canSubmitFees = (): boolean => this.auth.hasRole('SuperAdmin', 'Principal', 'Admin', 'Accountant');
   canManageAccount = (): boolean => this.auth.hasRole('SuperAdmin', 'Principal', 'Admin');
+  canErase = (): boolean => this.auth.hasRole('SuperAdmin', 'Principal');
+  showErase = signal(false);
+  eraseConfirm = '';
+  erasing = signal(false);
+  eraseMsg = signal('');
 
   // The login ID is fine to display (it's an identifier, not a secret) and is fetched
   // once from Identity.API. The password is the opposite: never retrievable once set
@@ -715,6 +757,26 @@ export class StudentDetailComponent implements OnInit {
     this.feesService.receipt(transactionId).subscribe({
       next: (link) => openDownload(link?.downloadUrl),
       error: () => {},
+    });
+  }
+
+  eraseMatches(s: Student): boolean {
+    return !!s.admissionNumber && this.eraseConfirm.trim().toLowerCase() === s.admissionNumber.toLowerCase();
+  }
+
+  erase(s: Student): void {
+    if (!this.eraseMatches(s)) return;
+    this.erasing.set(true); this.eraseMsg.set('');
+    this.studentsService.erasePersonalData(this.id, this.eraseConfirm.trim()).subscribe({
+      next: () => {
+        this.erasing.set(false); this.showErase.set(false); this.eraseConfirm = '';
+        this.toast.success('Personal data erased.');
+        this.studentsService.get(this.id).subscribe({ next: (st) => this.student.set(st) });
+      },
+      error: (err) => {
+        this.erasing.set(false);
+        this.eraseMsg.set(this.msg(err, 'Could not erase the personal data.'));
+      },
     });
   }
 

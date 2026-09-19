@@ -234,4 +234,9 @@ export class StudentsService {
   downloadTransferCertificate(id: string): Observable<DownloadLink> {
     return this.api.get(`/api/transfer-certificates/${id}/download`);
   }
+
+  /** Erases a former student's personal data (right to erasure). Needs the admission number to confirm. */
+  erasePersonalData(id: string, confirmAdmissionNumber: string): Observable<unknown> {
+    return this.api.post(`/api/students/${id}/erase-personal-data`, { confirmAdmissionNumber });
+  }
 }

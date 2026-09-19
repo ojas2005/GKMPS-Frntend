@@ -7,12 +7,15 @@ import { environment } from '../../../environments/environment';
  *     as the gateway (e.g. behind the same Caddy), or `ng serve` proxies /api.
  *   - apiBaseUrl "https://api.yourschool.com": frontend hosted elsewhere; that origin must
  *     then be listed in the gateway's Cors:AllowedOrigins (FRONTEND_URL).
+ *   - privacyContact: who families contact about their data, shown on the privacy notice
+ *     (e.g. "the Principal, principal@school.in, 0120-1234567").
  */
 export interface RuntimeConfig {
   apiBaseUrl: string;
+  privacyContact: string;
 }
 
-let config: RuntimeConfig = { apiBaseUrl: environment.apiBaseUrl };
+let config: RuntimeConfig = { apiBaseUrl: environment.apiBaseUrl, privacyContact: 'the school office' };
 
 export async function loadRuntimeConfig(): Promise<void> {
   try {
@@ -22,6 +25,9 @@ export async function loadRuntimeConfig(): Promise<void> {
       if (typeof json.apiBaseUrl === 'string') {
         config = { ...config, apiBaseUrl: json.apiBaseUrl.replace(/\/+$/, '') };
       }
+      if (typeof json.privacyContact === 'string' && json.privacyContact.trim()) {
+        config = { ...config, privacyContact: json.privacyContact.trim() };
+      }
     }
   } catch {
     // No config.json (or unreadable): keep the build-time default.
@@ -30,6 +36,10 @@ export async function loadRuntimeConfig(): Promise<void> {
 
 export function apiBaseUrl(): string {
   return config.apiBaseUrl;
+}
+
+export function privacyContact(): string {
+  return config.privacyContact;
 }
 
 /**

@@ -9,6 +9,12 @@ export const routes: Routes = [
     path: 'auth',
     loadChildren: () => import('./features/auth/auth.routes').then(m => m.AUTH_ROUTES),
   },
+  // The privacy notice is public: families can read it before they have an account.
+  {
+    path: 'privacy',
+    title: 'Privacy notice',
+    loadComponent: () => import('./features/privacy/privacy.component').then(m => m.PrivacyComponent),
+  },
   // Everything else is behind the layout shell, requires login, and each route
   // is additionally gated by role via roleGuard (data.roles from the nav catalog).
   {
