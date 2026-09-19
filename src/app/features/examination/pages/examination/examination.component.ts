@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { openDownload } from '../../../../core/config/runtime-config';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ExaminationService, Exam, StudentResult } from '../../examination.service';
@@ -14,8 +15,8 @@ import { AuthService } from '../../../../core/auth/auth.service';
     <div class="p-6 space-y-6">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-neutral-900">{{ selfService ? 'My Results' : 'Examinations' }}</h1>
-          <p class="text-neutral-600 text-sm">{{ selfService ? 'Your published exam results and report cards.' : 'Exams from Examination.API.' }}</p>
+          <h1 class="text-2xl font-bold text-neutral-900">{{ selfService ? (parentView ? "My Child's Results" : 'My Results') : 'Examinations' }}</h1>
+          <p class="text-neutral-600 text-sm">{{ selfService ? (parentView ? "Your child's published exam results and report cards." : 'Your published exam results and report cards.') : 'Exams, marks and report cards.' }}</p>
         </div>
         <button *ngIf="!selfService" (click)="showForm.set(!showForm())" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium">
           {{ showForm() ? 'Close' : '+ New Exam' }}
@@ -57,33 +58,33 @@ import { AuthService } from '../../../../core/auth/auth.service';
       <div *ngIf="!selfService && showForm()" class="bg-white rounded-xl p-6 shadow-sm border border-neutral-200">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Exam name *</label>
-            <input [(ngModel)]="form.name" placeholder="Unit Test 1" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="examination-f1">Exam name *</label>
+            <input id="examination-f1" [(ngModel)]="form.name" placeholder="Unit Test 1" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Class *</label>
-            <select [(ngModel)]="form.classId" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
+            <label class="block text-xs text-neutral-500 mb-1" for="examination-f2">Class *</label>
+            <select id="examination-f2" [(ngModel)]="form.classId" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
               <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Subject *</label>
-            <select [(ngModel)]="form.subjectId" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
+            <label class="block text-xs text-neutral-500 mb-1" for="examination-f3">Subject *</label>
+            <select id="examination-f3" [(ngModel)]="form.subjectId" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
               <option value="">Select subject</option>
               <option *ngFor="let s of subjectsForClass()" [value]="s.id">{{ s.name }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Exam date *</label>
-            <input [(ngModel)]="form.examDate" type="date" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="examination-f4">Exam date *</label>
+            <input id="examination-f4" [(ngModel)]="form.examDate" type="date" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Max marks *</label>
-            <input [(ngModel)]="form.maxMarks" type="number" placeholder="100" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="examination-f5">Max marks *</label>
+            <input id="examination-f5" [(ngModel)]="form.maxMarks" type="number" placeholder="100" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Passing marks *</label>
-            <input [(ngModel)]="form.passingMarks" type="number" placeholder="35" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="examination-f6">Passing marks *</label>
+            <input id="examination-f6" [(ngModel)]="form.passingMarks" type="number" placeholder="35" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
         </div>
         <div class="mt-4 flex items-center gap-3">
@@ -125,6 +126,7 @@ export class ExaminationComponent implements OnInit {
   private academics = inject(AcademicsService);
   private auth = inject(AuthService);
   selfService = this.auth.isSelfService();
+  parentView = this.auth.isParentView();
   myResults = signal<StudentResult[]>([]);
   resultsError = signal('');
   rows = signal<Exam[]>([]);
@@ -164,7 +166,7 @@ export class ExaminationComponent implements OnInit {
     const id = this.auth.studentId();
     if (!id) return;
     this.service.reportCard(r.examId, id).subscribe({
-      next: (link: any) => { if (link?.downloadUrl) window.open(link.downloadUrl, '_blank'); },
+      next: (link: any) => openDownload(link?.downloadUrl),
       error: (err) => this.resultsError.set(this.msg(err, 'Could not generate the report card.')),
     });
   }

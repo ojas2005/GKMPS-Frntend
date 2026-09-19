@@ -39,16 +39,16 @@ import { SCHOOL_CLASSES, classNameById } from '../../../../core/constants/classe
         <!-- Owner: audience picker -->
         <div *ngIf="isOwner()" class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Send to</label>
-            <select [(ngModel)]="audience" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
+            <label class="block text-xs text-neutral-500 mb-1" for="communication-f1">Send to</label>
+            <select id="communication-f1" [(ngModel)]="audience" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
               <option value="">Everyone</option>
               <option value="Teacher">Teachers only</option>
               <option value="Student">Students only</option>
             </select>
           </div>
           <div *ngIf="audience === 'Student'">
-            <label class="block text-xs text-neutral-500 mb-1">Limit to one class (optional)</label>
-            <select [(ngModel)]="audienceClassId" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
+            <label class="block text-xs text-neutral-500 mb-1" for="communication-f2">Limit to one class (optional)</label>
+            <select id="communication-f2" [(ngModel)]="audienceClassId" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
               <option value="">All classes</option>
               <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
             </select>
@@ -78,7 +78,7 @@ import { SCHOOL_CLASSES, classNameById } from '../../../../core/constants/classe
             <span class="text-xs text-neutral-500">{{ a.publishedAtUtc ? (a.publishedAtUtc | date:'medium') : '' }}</span>
           </div>
           <p class="text-neutral-600 text-sm mt-2">{{ a.body }}</p>
-          <p class="text-xs text-neutral-400 mt-2">
+          <p class="text-xs text-neutral-500 mt-2">
             {{ audienceLabel(a) }}
           </p>
         </div>

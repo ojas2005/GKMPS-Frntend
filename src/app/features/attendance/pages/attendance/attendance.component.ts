@@ -13,9 +13,9 @@ import { AuthService } from '../../../../core/auth/auth.service';
   template: `
     <div class="p-6 space-y-6">
       <div>
-        <h1 class="text-2xl font-bold text-neutral-900">{{ selfService ? 'My Attendance' : 'Attendance' }}</h1>
+        <h1 class="text-2xl font-bold text-neutral-900">{{ selfService ? (parentView ? "My Child's Attendance" : 'My Attendance') : 'Attendance' }}</h1>
         <p class="text-neutral-600 text-sm">
-          {{ selfService ? 'Your attendance percentage and daily log.' :
+          {{ selfService ? (parentView ? "Your child's attendance percentage and daily log." : 'Your attendance percentage and daily log.') :
              (isTeacher ? 'Mark attendance for your class (class teachers only).' : 'View a class register or mark students.') }}
         </p>
       </div>
@@ -25,12 +25,12 @@ import { AuthService } from '../../../../core/auth/auth.service';
         <div class="bg-white rounded-xl p-6 shadow-sm border border-neutral-200">
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <div>
-              <label class="block text-xs text-neutral-500 mb-1">From</label>
-              <input [(ngModel)]="fromDate" type="date" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+              <label class="block text-xs text-neutral-500 mb-1" for="attendance-f1">From</label>
+              <input id="attendance-f1" [(ngModel)]="fromDate" type="date" aria-label="From date" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
             </div>
             <div>
-              <label class="block text-xs text-neutral-500 mb-1">To</label>
-              <input [(ngModel)]="toDate" type="date" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+              <label class="block text-xs text-neutral-500 mb-1" for="attendance-f2">To</label>
+              <input id="attendance-f2" [(ngModel)]="toDate" type="date" aria-label="To date" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
             </div>
             <button (click)="loadMine()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium">Refresh</button>
             <div class="text-3xl font-bold text-neutral-900">{{ myPct() !== null ? (myPct() + '%') : '—' }}</div>
@@ -62,13 +62,13 @@ import { AuthService } from '../../../../core/auth/auth.service';
       <ng-container *ngIf="!isTeacher || classTeacherClassId">
       <!-- Filters -->
       <div class="bg-white rounded-xl p-6 shadow-sm border border-neutral-200 grid grid-cols-1 md:grid-cols-4 gap-4">
-        <select [(ngModel)]="classId" [disabled]="isTeacher" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white disabled:bg-neutral-100">
+        <select [(ngModel)]="classId" aria-label="Class" [disabled]="isTeacher" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white disabled:bg-neutral-100">
           <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
         </select>
-        <select [(ngModel)]="sectionId" [disabled]="isTeacher" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white disabled:bg-neutral-100">
+        <select [(ngModel)]="sectionId" aria-label="Section" [disabled]="isTeacher" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white disabled:bg-neutral-100">
           <option *ngFor="let s of sections" [value]="s.id">Section {{ s.name }}</option>
         </select>
-        <input [(ngModel)]="date" type="date" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+        <input [(ngModel)]="date" type="date" aria-label="Date" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
         <button (click)="load(); loadRoster()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium">Load register</button>
       </div>
       <p *ngIf="isTeacher" class="text-xs text-neutral-500 -mt-3">
@@ -98,7 +98,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
                   [class]="status === 'Present' ? 'bg-success-50 text-success-700' : (status === 'Late' ? 'bg-warning-50 text-warning-700' : 'bg-error-50 text-error-700')">
                   {{ status }}
                 </span>
-                <span *ngIf="!statusFor(st.id)" class="text-neutral-400 text-xs">not marked</span>
+                <span *ngIf="!statusFor(st.id)" class="text-neutral-500 text-xs">not marked</span>
               </td>
               <td class="px-6 py-3 text-right space-x-1">
                 <button (click)="markStudent(st.id, 'Present')" [disabled]="!!statusFor(st.id) || saving()"
@@ -123,6 +123,8 @@ export class AttendanceComponent implements OnInit {
   private auth = inject(AuthService);
 
   selfService = this.auth.isSelfService();
+
+  parentView = this.auth.isParentView();
   isTeacher = this.auth.hasRole('Teacher');
   classTeacherClassId = this.auth.classTeacherClassId();
 

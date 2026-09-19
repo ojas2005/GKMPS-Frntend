@@ -31,6 +31,11 @@ export class UsersService {
     return this.api.get('/api/users', { page: 1, pageSize: 20, ...query });
   }
 
+  // For someone who lost the phone with their authenticator app: they set it up again at next sign-in.
+  resetTwoFactor(id: string): Observable<unknown> {
+    return this.api.post(`/api/users/${id}/two-factor/reset`, {});
+  }
+
   setStatus(id: string, isActive: boolean): Observable<unknown> {
     return this.api.patch(`/api/users/${id}/status?isActive=${isActive}`);
   }

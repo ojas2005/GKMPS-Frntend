@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { openDownload } from '../../../../core/config/runtime-config';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -27,8 +28,8 @@ interface SearchPendingRow {
     <div class="p-6 space-y-6">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-neutral-900">{{ selfService ? 'My Fees' : 'Fees' }}</h1>
-          <p class="text-neutral-600 text-sm">{{ selfService ? 'Your fee payments and dues.' : 'Fee structures, pending dues & collection totals from Fee.API.' }}</p>
+          <h1 class="text-2xl font-bold text-neutral-900">{{ selfService ? (parentView ? "My Child's Fees" : 'My Fees') : 'Fees' }}</h1>
+          <p class="text-neutral-600 text-sm">{{ selfService ? (parentView ? "Your child's fee payments and dues." : 'Your fee payments and dues.') : 'Fee structures, pending dues & collection totals.' }}</p>
         </div>
         <button *ngIf="!selfService" (click)="showForm.set(!showForm())" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium">
           {{ showForm() ? 'Close' : '+ Fee Structure' }}
@@ -91,7 +92,7 @@ interface SearchPendingRow {
         <h2 class="text-lg font-semibold text-neutral-900 mb-1">Pending fees — by class</h2>
         <p class="text-xs text-neutral-500 mb-4">Every student with a due in this class, most-pending first.</p>
         <div class="flex items-center gap-3 mb-4">
-          <select [(ngModel)]="pendingClassId" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
+          <select [(ngModel)]="pendingClassId" aria-label="Class for pending fees" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
             <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
           </select>
           <button (click)="loadPendingByClass()" [disabled]="pendingLoading()"
@@ -154,8 +155,8 @@ interface SearchPendingRow {
       <div *ngIf="!selfService" class="bg-white rounded-xl p-6 shadow-sm border border-neutral-200">
         <h2 class="text-lg font-semibold text-neutral-900 mb-4">Collection totals</h2>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-          <input [(ngModel)]="fromDate" type="date" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
-          <input [(ngModel)]="toDate" type="date" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+          <input [(ngModel)]="fromDate" type="date" aria-label="From date" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+          <input [(ngModel)]="toDate" type="date" aria-label="To date" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           <button (click)="loadTotals()" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium">Get total</button>
           <div class="text-2xl font-bold text-neutral-900">{{ total() !== null ? ('₹' + total()) : '—' }}</div>
         </div>
@@ -165,26 +166,26 @@ interface SearchPendingRow {
       <div *ngIf="showForm()" class="bg-white rounded-xl p-6 shadow-sm border border-neutral-200">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Name *</label>
-            <input [(ngModel)]="form.name" placeholder="Tuition Term 1" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="fees-f1">Name *</label>
+            <input id="fees-f1" [(ngModel)]="form.name" placeholder="Tuition Term 1" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Class *</label>
-            <select [(ngModel)]="form.classId" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
+            <label class="block text-xs text-neutral-500 mb-1" for="fees-f2">Class *</label>
+            <select id="fees-f2" [(ngModel)]="form.classId" aria-label="Class" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
               <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Academic year *</label>
-            <input [(ngModel)]="form.academicYear" placeholder="2026-27" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="fees-f3">Academic year *</label>
+            <input id="fees-f3" [(ngModel)]="form.academicYear" placeholder="2026-27" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Amount *</label>
-            <input [(ngModel)]="form.amount" type="number" placeholder="25000" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="fees-f4">Amount *</label>
+            <input id="fees-f4" [(ngModel)]="form.amount" type="number" placeholder="25000" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Due date *</label>
-            <input [(ngModel)]="form.dueDate" type="date" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="fees-f5">Due date *</label>
+            <input id="fees-f5" [(ngModel)]="form.dueDate" type="date" aria-label="Due date" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
         </div>
         <p class="text-xs text-neutral-500 mt-3">
@@ -201,7 +202,7 @@ interface SearchPendingRow {
       <!-- Structures list (staff only) -->
       <div *ngIf="!selfService" class="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
         <div class="flex items-center gap-3 p-4 border-b border-neutral-200">
-          <select [(ngModel)]="filterClassId" class="flex-1 px-4 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+          <select [(ngModel)]="filterClassId" aria-label="Filter fee structures by class" class="flex-1 px-4 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
             <option value="">All classes</option>
             <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
           </select>
@@ -233,6 +234,7 @@ export class FeesComponent implements OnInit {
   private studentsService = inject(StudentsService);
   private auth = inject(AuthService);
   selfService = this.auth.isSelfService();
+  parentView = this.auth.isParentView();
   myFees = signal<FeePayment[]>([]);
   myTransactions = signal<PaymentTransactionSummary[]>([]);
   rows = signal<FeeStructure[]>([]);
@@ -297,7 +299,7 @@ export class FeesComponent implements OnInit {
 
   downloadReceipt(transactionId: string): void {
     this.service.receipt(transactionId).subscribe({
-      next: (link) => { if (link?.downloadUrl) window.open(link.downloadUrl, '_blank'); },
+      next: (link) => openDownload(link?.downloadUrl),
       error: () => {},
     });
   }

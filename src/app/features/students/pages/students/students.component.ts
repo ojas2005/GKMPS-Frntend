@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { StudentsService, Student, AdmitStudentForm, Credentials } from '../../students.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classNameById, sectionNameById } from '../../../../core/constants/classes';
@@ -49,73 +49,73 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classN
         <p class="text-xs text-neutral-500 mb-4">You set the login ID &amp; password and give them to the student. Fields marked * are required.</p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Full name *</label>
-            <input [(ngModel)]="form.fullName" placeholder="Aarav Sharma" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="students-f1">Full name *</label>
+            <input id="students-f1" [(ngModel)]="form.fullName" placeholder="Aarav Sharma" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Date of birth *</label>
-            <input [(ngModel)]="form.dateOfBirth" type="date" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="students-f2">Date of birth *</label>
+            <input id="students-f2" [(ngModel)]="form.dateOfBirth" type="date" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Gender *</label>
-            <select [(ngModel)]="form.gender" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
+            <label class="block text-xs text-neutral-500 mb-1" for="students-f3">Gender *</label>
+            <select id="students-f3" [(ngModel)]="form.gender" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
               <option value="Male">Male</option>
               <option value="Female">Female</option>
               <option value="Other">Other</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Admission number</label>
-            <input [(ngModel)]="form.admissionNumber" placeholder="auto-generated if blank" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="students-f4">Admission number</label>
+            <input id="students-f4" [(ngModel)]="form.admissionNumber" placeholder="auto-generated if blank" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Class *</label>
-            <select [(ngModel)]="form.classId" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
+            <label class="block text-xs text-neutral-500 mb-1" for="students-f5">Class *</label>
+            <select id="students-f5" [(ngModel)]="form.classId" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
               <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Section *</label>
-            <select [(ngModel)]="form.sectionId" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
+            <label class="block text-xs text-neutral-500 mb-1" for="students-f6">Section *</label>
+            <select id="students-f6" [(ngModel)]="form.sectionId" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
               <option *ngFor="let s of sections" [value]="s.id">{{ s.name }}</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Login ID * (give this to the student)</label>
-            <input [(ngModel)]="form.username" placeholder="e.g. aarav2026" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="students-f7">Login ID * (give this to the student)</label>
+            <input id="students-f7" [(ngModel)]="form.username" placeholder="e.g. aarav2026" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Password * (min 8 characters)</label>
-            <input [(ngModel)]="form.password" placeholder="e.g. Student@123" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="students-f8">Password * (min 10 characters)</label>
+            <input id="students-f8" [(ngModel)]="form.password" placeholder="e.g. mango river lantern" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Parent name</label>
-            <input [(ngModel)]="form.parentName" placeholder="Optional" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="students-f9">Parent name</label>
+            <input id="students-f9" [(ngModel)]="form.parentName" placeholder="Optional" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Parent phone</label>
-            <input [(ngModel)]="form.parentPhone" placeholder="Optional" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="students-f10">Parent phone</label>
+            <input id="students-f10" [(ngModel)]="form.parentPhone" placeholder="Optional" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Parent email</label>
-            <input [(ngModel)]="form.parentEmail" type="email" placeholder="Optional — admission confirmation is sent here" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="students-f11">Parent email</label>
+            <input id="students-f11" [(ngModel)]="form.parentEmail" type="email" placeholder="Optional — admission confirmation is sent here" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div class="md:col-span-2 border-t border-neutral-200 pt-4">
             <p class="text-sm font-medium text-neutral-900">Parent login <span class="font-normal text-neutral-500">(optional)</span></p>
             <p class="text-xs text-neutral-500">Lets the parent see this student's attendance, results and fees. Leave blank to skip; you can add it later from the student's page.</p>
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Parent login ID</label>
-            <input [(ngModel)]="form.parentUsername" placeholder="e.g. aarav2026.parent" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="students-f12">Parent login ID</label>
+            <input id="students-f12" [(ngModel)]="form.parentUsername" placeholder="e.g. aarav2026.parent" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Parent password (min 8 characters)</label>
-            <input [(ngModel)]="form.parentPassword" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <label class="block text-xs text-neutral-500 mb-1" for="students-f13">Parent password (min 10 characters)</label>
+            <input id="students-f13" [(ngModel)]="form.parentPassword" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Pending fee at admission (₹)</label>
-            <input [(ngModel)]="form.pendingFee" type="number" min="0" placeholder="0 if none" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
-            <p class="text-xs text-neutral-400 mt-1">Added on top of the class's fee structure. Their upcoming class fees are assessed automatically.</p>
+            <label class="block text-xs text-neutral-500 mb-1" for="students-f14">Pending fee at admission (₹)</label>
+            <input id="students-f14" [(ngModel)]="form.pendingFee" type="number" min="0" placeholder="0 if none" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <p class="text-xs text-neutral-500 mt-1">Added on top of the class's fee structure. Their upcoming class fees are assessed automatically.</p>
           </div>
         </div>
         <div class="mt-4 flex items-center gap-3">
@@ -166,6 +166,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classN
 export class StudentsComponent implements OnInit {
   private service = inject(StudentsService);
   private auth = inject(AuthService);
+  private route = inject(ActivatedRoute);
 
   // Admission is an office action (the API rejects teachers).
   readonly canAdmit = this.auth.hasRole('SuperAdmin', 'Principal', 'Admin');
@@ -193,7 +194,12 @@ export class StudentsComponent implements OnInit {
   form: AdmitStudentForm = this.blankForm();
 
   ngOnInit(): void {
-    this.load();
+    // ?q= comes from the top bar's search box; re-running on every change means a second
+    // search from the top bar refreshes this list instead of doing nothing.
+    this.route.queryParamMap.subscribe((params) => {
+      this.keyword = params.get('q') ?? '';
+      this.load();
+    });
   }
 
   load(): void {
@@ -216,12 +222,12 @@ export class StudentsComponent implements OnInit {
       this.formError.set('Full name, date of birth, gender, class and section are required.');
       return;
     }
-    if (!this.form.username.trim() || (this.form.password ?? '').length < 8) {
-      this.formError.set('A login ID and a password of at least 8 characters are required.');
+    if (!this.form.username.trim() || (this.form.password ?? '').length < 10) {
+      this.formError.set('A login ID and a password of at least 10 characters are required.');
       return;
     }
-    if (this.form.parentUsername?.trim() && (this.form.parentPassword ?? '').length < 8) {
-      this.formError.set('The parent login needs a password of at least 8 characters.');
+    if (this.form.parentUsername?.trim() && (this.form.parentPassword ?? '').length < 10) {
+      this.formError.set('The parent login needs a password of at least 10 characters.');
       return;
     }
     this.saving.set(true);

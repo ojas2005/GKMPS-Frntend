@@ -1,13 +1,15 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { retry, throwError, timer } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { SignOutReason, idleTimeoutMinutes, takeSignOutReason } from '../../../../core/auth/session-activity';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, RouterLink],
   template: `
     <div class="login-page min-h-screen relative overflow-hidden flex items-center justify-center px-4">
       <!-- Deep gradient base -->
@@ -46,14 +48,33 @@ import { AuthService } from '../../../../core/auth/auth.service';
             <p class="text-neutral-600 text-sm">Sign in with the ID given to you by the school</p>
           </div>
 
-          <!-- Form -->
-          <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-4">
+          <!-- Why the user was signed out, when it wasn't their choice -->
+          <div *ngIf="signedOutMessage()" role="status" class="mb-4 p-3 rounded-lg border border-primary-200 bg-primary-50">
+            <p class="text-primary-800 text-sm">{{ signedOutMessage() }}</p>
+          </div>
+
+          <!-- Step 2: the code from the authenticator app -->
+          <form *ngIf="challenge()" (ngSubmit)="submitCode()" class="space-y-4">
+            <div>
+              <label for="two-factor-code" class="block text-sm font-medium text-neutral-900 mb-2">Code from your authenticator app</label>
+              <input id="two-factor-code" name="code" [(ngModel)]="code" autocomplete="one-time-code" inputmode="numeric"
+                     placeholder="123 456" class="w-full px-4 py-2.5 rounded-lg border border-neutral-300 text-center tracking-widest text-lg">
+              <p class="text-xs text-neutral-500 mt-2">Lost your phone? Enter one of your recovery codes instead.</p>
+            </div>
+            <button type="submit" [disabled]="isLoading() || !code.trim()" class="submit-btn w-full text-white font-medium py-2.5 rounded-lg">
+              {{ isLoading() ? 'Checking...' : 'Verify' }}
+            </button>
+            <button type="button" (click)="startOver()" class="w-full text-sm text-neutral-600 hover:underline">Use a different account</button>
+          </form>
+
+          <!-- Step 1: login ID and password -->
+          <form *ngIf="!challenge()" [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-4">
             <!-- Login ID Input -->
             <div class="stagger" style="--i: 1">
-              <label class="block text-sm font-medium text-neutral-900 mb-2">
+              <label class="block text-sm font-medium text-neutral-900 mb-2" for="login-f1">
                 Login ID
               </label>
-              <input
+              <input id="login-f1"
                 type="text"
                 formControlName="loginId"
                 placeholder="Your login ID (or email)"
@@ -100,6 +121,14 @@ import { AuthService } from '../../../../core/auth/auth.service';
               </p>
             </div>
 
+            <!-- Shared school computers: stay signed in only when asked to -->
+            <label class="stagger flex items-start gap-2 text-sm text-neutral-700" style="--i: 3">
+              <input type="checkbox" formControlName="rememberMe" class="mt-0.5 h-4 w-4 rounded border-neutral-300">
+              <span>Keep me signed in on this device
+                <span class="block text-xs text-neutral-500">Only on your own phone or computer -- not on a shared or school computer.</span>
+              </span>
+            </label>
+
             <!-- Submit Button -->
             <button
               type="submit"
@@ -110,7 +139,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
               <span *ngIf="!isLoading()">Sign In</span>
               <span *ngIf="isLoading()" class="flex items-center justify-center gap-2">
                 <span class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                Signing in...
+                {{ wakingServer() ? 'Waking up the server...' : 'Signing in...' }}
               </span>
             </button>
           </form>
@@ -129,7 +158,8 @@ import { AuthService } from '../../../../core/auth/auth.service';
 
         <!-- Footer -->
         <p class="stagger text-center text-white/70 text-sm mt-6" style="--i: 5">
-          &copy; 2026 GKMPS School Portal
+          &copy; 2026 GKMPS School Portal &middot;
+          <a routerLink="/privacy" class="underline hover:text-white">Privacy notice</a>
         </p>
       </div>
     </div>
@@ -415,6 +445,8 @@ export class LoginComponent {
   isLoading = signal(false);
   showPassword = signal(false);
   errorMessage = signal('');
+  signedOutMessage = signal(this.describeSignOut(takeSignOutReason()));
+  wakingServer = signal(false);
 
   toggleShowPassword(): void {
     this.showPassword.update((v) => !v);
@@ -426,7 +458,50 @@ export class LoginComponent {
     this.loginForm = this.fb.group({
       loginId: ['', [Validators.required]],
       password: ['', [Validators.required]],
+      rememberMe: [false],
     });
+  }
+
+  private describeSignOut(reason: SignOutReason | null): string {
+    if (reason === 'idle') return `You were signed out after ${idleTimeoutMinutes()} minutes of inactivity. Please sign in again.`;
+    if (reason === 'expired') return 'Your session has ended. Please sign in again.';
+    return '';
+  }
+
+  // Two-step sign-in: set once the password is accepted and a code is needed.
+  challenge = signal<string | null>(null);
+  code = '';
+
+  submitCode(): void {
+    const challenge = this.challenge();
+    if (!challenge || !this.code.trim()) return;
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+    this.auth.completeTwoFactor(challenge, this.code.trim()).subscribe({
+      next: (user) => {
+        this.isLoading.set(false);
+        this.afterSignIn(user.pendingAction);
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        this.code = '';
+        const msg = err?.error?.message || 'That code is not right.';
+        // The server ends the challenge after too many wrong codes or when it expires.
+        if (/password again/i.test(msg)) this.challenge.set(null);
+        this.errorMessage.set(msg);
+      },
+    });
+  }
+
+  startOver(): void {
+    this.challenge.set(null);
+    this.code = '';
+    this.errorMessage.set('');
+  }
+
+  // A required step (new password, two-step setup) comes before anything else.
+  private afterSignIn(pending: string | null | undefined): void {
+    this.router.navigate([pending ? '/account' : '/dashboard']);
   }
 
   isFieldInvalid(fieldName: string): boolean {
@@ -442,11 +517,30 @@ export class LoginComponent {
     this.isLoading.set(true);
     this.errorMessage.set('');
 
-    const { loginId, password } = this.loginForm.value;
-    this.auth.login({ loginId: (loginId ?? '').trim(), password }).subscribe({
-      next: () => {
+    const { loginId, password, rememberMe } = this.loginForm.value;
+    this.wakingServer.set(false);
+    this.auth
+      .login({ loginId: (loginId ?? '').trim(), password, rememberMe: !!rememberMe })
+      .pipe(
+        // The API scales to zero when idle; the first request after a quiet spell can fail
+        // with no response (or a gateway 502-504) while it starts, so retry those for ~40s.
+        retry({
+          count: 6,
+          delay: (err, attempt) => {
+            if (![0, 502, 503, 504].includes(err?.status)) return throwError(() => err);
+            this.wakingServer.set(true);
+            return timer(Math.min(2000 * attempt, 10000));
+          },
+        }),
+      )
+      .subscribe({
+      next: (outcome) => {
         this.isLoading.set(false);
-        this.router.navigate(['/dashboard']);
+        if (outcome.kind === 'two-factor') {
+          this.challenge.set(outcome.challenge);
+          return;
+        }
+        this.afterSignIn(outcome.user.pendingAction);
       },
       error: (err) => {
         this.isLoading.set(false);
@@ -458,6 +552,6 @@ export class LoginComponent {
             : 'Invalid login ID or password.');
         this.errorMessage.set(msg);
       },
-    });
+      });
   }
 }
