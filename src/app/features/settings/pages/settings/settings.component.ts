@@ -107,7 +107,8 @@ export class SettingsComponent implements OnInit {
   private auth = inject(AuthService);
   private toast = inject(ToastService);
 
-  roles = Object.values(RoleNames);
+  // Students have no logins any more (parents sign in), so there is nothing to filter for.
+  roles = Object.values(RoleNames).filter((r) => r !== RoleNames.Student);
   role = '';
   keyword = '';
   page = 1;

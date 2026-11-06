@@ -3,14 +3,14 @@ import { openDownload } from '../../../../core/config/runtime-config';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { StudentsService, Student } from '../../students.service';
+import { StudentsService, Student, studentStatusLabel } from '../../students.service';
 import { AttendanceService } from '../../../attendance/attendance.service';
 import { FeesService, FeePayment, PaymentTransactionSummary } from '../../../fees/fees.service';
 import { ExaminationService, StudentResult } from '../../../examination/examination.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { UsersService } from '../../../../core/services/users.service';
 import { ToastService } from '../../../../core/services/toast.service';
-import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from '../../../../core/constants/classes';
+import { SCHOOL_CLASSES, SCHOOL_SECTIONS, CURRENT_ACADEMIC_YEAR, classNameById, sectionNameById } from '../../../../core/constants/classes';
 import { THEMED_FIELDS } from '../../../../shared/forms';
 
 /**
@@ -40,7 +40,10 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
               <p class="text-neutral-600 text-sm mt-1">
                 {{ className(s.classId) }} - {{ sectionName(s.sectionId) }}
                 &nbsp;·&nbsp; Admission # {{ s.admissionNumber || '—' }}
-                &nbsp;·&nbsp; {{ s.status || 'Active' }}
+                &nbsp;·&nbsp; {{ statusLabel(s.status) }}
+              </p>
+              <p *ngIf="s.status === 'Removed'" class="text-sm text-neutral-500 mt-1">
+                Removed{{ s.removedAtUtc ? ' on ' + (s.removedAtUtc | date:'mediumDate') : '' }}{{ s.removalReason ? ' — ' + s.removalReason : '' }}
               </p>
             </div>
             <div class="text-right text-3xl font-bold" [class]="pctClass()">
@@ -51,20 +54,21 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 text-sm">
             <div><span class="text-neutral-500 block text-xs">Gender</span>{{ s['gender'] || '—' }}</div>
             <div><span class="text-neutral-500 block text-xs">Date of birth</span>{{ dob(s) ? (dob(s) | date:'mediumDate') : '—' }}</div>
-            <div><span class="text-neutral-500 block text-xs">Guardian</span>{{ s['parentName'] || s.guardianName || '—' }}</div>
-            <div><span class="text-neutral-500 block text-xs">Guardian phone</span>{{ s['parentPhone'] || s.guardianPhone || '—' }}</div>
-            <div *ngIf="canManageAccount()">
-              <span class="text-neutral-500 block text-xs">Login ID</span>
-              <span class="font-mono">{{ loginId() || '—' }}</span>
-            </div>
-          </div>
-
-          <!-- New credentials just set (password reset or first look). Password is only ever
-               shown here, right after being typed/set -- never retrieved from storage. -->
-          <div *ngIf="justSetPassword()" class="mt-4 bg-success-50 border border-success-500 rounded-xl p-4 text-sm text-success-800">
-            <p class="font-semibold mb-1">Password updated — hand these to the student:</p>
-            <p>Login ID: <span class="font-mono font-bold">{{ loginId() }}</span>
-               &nbsp;·&nbsp; Password: <span class="font-mono font-bold">{{ justSetPassword() }}</span></p>
+            <div><span class="text-neutral-500 block text-xs">Address</span>{{ s.address || '—' }}</div>
+            <div></div>
+            <ng-container *ngIf="s.fatherName || s.motherName; else legacyGuardian">
+              <div><span class="text-neutral-500 block text-xs">Father</span>{{ s.fatherName || '—' }}</div>
+              <div><span class="text-neutral-500 block text-xs">Father's mobile</span>{{ s.fatherPhone || '—' }}
+                <span *ngIf="s.fatherEmail" class="block text-xs text-neutral-500">{{ s.fatherEmail }}</span></div>
+              <div><span class="text-neutral-500 block text-xs">Mother</span>{{ s.motherName || '—' }}</div>
+              <div><span class="text-neutral-500 block text-xs">Mother's mobile</span>{{ s.motherPhone || '—' }}
+                <span *ngIf="s.motherEmail" class="block text-xs text-neutral-500">{{ s.motherEmail }}</span></div>
+            </ng-container>
+            <ng-template #legacyGuardian>
+              <div><span class="text-neutral-500 block text-xs">Guardian</span>{{ s.parentName || '—' }}</div>
+              <div><span class="text-neutral-500 block text-xs">Guardian phone</span>{{ s.parentPhone || '—' }}</div>
+              <p *ngIf="canManageAccount()" class="col-span-2 text-xs text-warning-700">Father's and mother's details are missing — add them with "Edit details".</p>
+            </ng-template>
           </div>
 
           <!-- Edit details (Admin/Principal/SuperAdmin only) -->
@@ -73,7 +77,7 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
               class="text-primary-600 hover:text-primary-700 text-sm font-medium">Edit details</button>
             <div *ngIf="showEditForm()" class="reveal-panel">
               <h3 class="text-sm font-semibold text-neutral-900 mb-1">Edit student details</h3>
-              <p class="text-xs text-neutral-500 mb-3">Everything collected at admission. Login ID and password aren't changed here — use "Reset login password" below for that.</p>
+              <p class="text-xs text-neutral-500 mb-3">Everything collected at admission. The parent login is managed below.</p>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f1">Full name *</label>
@@ -106,16 +110,28 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
                   </select>
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f7">Guardian name</label>
-                  <input id="student-detail-f7" [(ngModel)]="editForm.parentName" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f7">Father's name *</label>
+                  <input id="student-detail-f7" [(ngModel)]="editForm.fatherName" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f8">Guardian phone</label>
-                  <input id="student-detail-f8" [(ngModel)]="editForm.parentPhone" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f8">Father's mobile number *</label>
+                  <input id="student-detail-f8" [(ngModel)]="editForm.fatherPhone" type="tel" inputmode="numeric" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f9">Guardian email</label>
-                  <input id="student-detail-f9" [(ngModel)]="editForm.parentEmail" type="email" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f9">Father's email</label>
+                  <input id="student-detail-f9" [(ngModel)]="editForm.fatherEmail" type="email" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f11">Mother's name *</label>
+                  <input id="student-detail-f11" [(ngModel)]="editForm.motherName" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f15">Mother's mobile number *</label>
+                  <input id="student-detail-f15" [(ngModel)]="editForm.motherPhone" type="tel" inputmode="numeric" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f16">Mother's email</label>
+                  <input id="student-detail-f16" [(ngModel)]="editForm.motherEmail" type="email" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <div>
                   <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f10">Address</label>
@@ -131,28 +147,6 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
                 <span *ngIf="editMsg()" class="text-sm" [class]="editOk() ? 'text-success-600' : 'text-error-600'">{{ editMsg() }}</span>
               </div>
 
-              <!-- Password reset stays available -- it's a distinct, Identity.API-owned
-                   action (login credentials), not part of this admission-details record. -->
-              <div class="mt-4 pt-4 border-t border-neutral-100">
-                <button *ngIf="!showPasswordForm()" (click)="showPasswordForm.set(true)" type="button"
-                  class="text-primary-600 hover:text-primary-700 text-xs font-medium">Reset login password</button>
-                <div *ngIf="showPasswordForm()" class="reveal-panel">
-                  <h4 class="text-xs font-semibold text-neutral-900 mb-1">Reset login password</h4>
-                  <p class="text-xs text-neutral-500 mb-3">An existing password can never be shown again once set (it's stored one-way hashed, same as everywhere else) — set a new one here and it'll be displayed once, right above, so you can hand it over. This signs the student out everywhere.</p>
-                  <div class="flex flex-wrap items-end gap-3">
-                    <div>
-                      <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f11">New password (min 10 chars) *</label>
-                      <input id="student-detail-f11" [(ngModel)]="newPassword" type="text" placeholder="e.g. mango river lantern" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
-                    </div>
-                    <button (click)="resetPassword(s)" [disabled]="settingPassword()"
-                      class="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">
-                      {{ settingPassword() ? 'Saving...' : 'Set password' }}
-                    </button>
-                    <button (click)="showPasswordForm.set(false); newPassword = ''; passwordMsg.set('')" type="button" class="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Cancel</button>
-                    <span *ngIf="passwordMsg() && !passwordOk()" class="text-sm text-error-600">{{ passwordMsg() }}</span>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -211,6 +205,15 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
             </div>
             <p *ngIf="feesError()" class="text-error-600 text-sm">{{ feesError() }}</p>
             <p *ngIf="!feesError() && fees().length === 0" class="text-neutral-500 text-sm">No fee records.</p>
+            <!-- Puts this year's fee structure for the student's class on the account; already-added fees are skipped. -->
+            <div *ngIf="canSubmitFees() && s.status === 'Active'" class="mb-4 flex flex-wrap items-center gap-3 text-sm">
+              <button type="button" (click)="assessClassFees(s)" [disabled]="assessing()"
+                class="px-3 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50 disabled:text-neutral-400">
+                {{ assessing() ? 'Adding…' : 'Assess dues for ' + academicYear }}
+              </button>
+              <span class="text-xs text-neutral-500">Adds any {{ className(s.classId) }} fees for {{ academicYear }} not on the account yet.</span>
+              <span *ngIf="assessMsg()" class="w-full text-sm" [class]="assessOk() ? 'text-success-600' : 'text-error-600'">{{ assessMsg() }}</span>
+            </div>
             <table *ngIf="fees().length > 0" class="w-full text-sm">
               <thead class="text-neutral-500 text-left text-xs">
                 <tr><th class="py-2">Fee</th><th class="py-2">Total</th><th class="py-2">Paid</th><th class="py-2">Pending</th><th class="py-2">Status</th></tr>
@@ -342,14 +345,50 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
           </div>
         </div>
 
+        <!-- Remove from the rolls / bring back (office) -->
+        <div *ngIf="canManageAccount() && s.status === 'Active'" class="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
+          <h2 class="text-lg font-semibold text-neutral-900">Remove student</h2>
+          <p class="text-sm text-neutral-600 mt-1">
+            Takes {{ s.fullName }} off the rolls: they leave class lists, attendance registers and fee
+            lists, and the parent login stops working (unless a brother or sister still uses it).
+            Their records are kept and you can bring them back later. To give a transfer
+            certificate instead, use the Transfer certificate section.
+          </p>
+          <button *ngIf="!showRemove()" type="button" (click)="showRemove.set(true)"
+            class="mt-4 px-4 py-2 rounded-lg border border-neutral-300 text-neutral-700 text-sm font-medium hover:bg-neutral-50">
+            Remove student…
+          </button>
+          <div *ngIf="showRemove()" class="reveal-panel mt-4">
+            <label for="remove-reason" class="block text-xs text-neutral-500 mb-1">Reason (optional)</label>
+            <input id="remove-reason" [(ngModel)]="removeReason" maxlength="500" placeholder="e.g. Left the school, fees unpaid since April"
+              class="w-full max-w-lg px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+            <div class="flex gap-2 mt-3">
+              <button type="button" (click)="removeStudent(s)" [disabled]="rosterBusy()"
+                class="px-4 py-2 rounded-lg bg-error-600 text-white text-sm font-medium hover:bg-error-700 disabled:opacity-50">
+                {{ rosterBusy() ? 'Removing…' : 'Remove ' + s.fullName }}
+              </button>
+              <button type="button" (click)="showRemove.set(false); removeReason = ''"
+                class="px-4 py-2 rounded-lg border border-neutral-300 text-neutral-700 text-sm">Cancel</button>
+            </div>
+          </div>
+          <p *ngIf="rosterMsg()" class="text-sm text-error-600 mt-2" role="alert">{{ rosterMsg() }}</p>
+        </div>
+        <div *ngIf="canManageAccount() && s.status === 'Removed'" class="bg-white rounded-xl shadow-sm border border-neutral-200 p-6 flex flex-wrap items-center justify-between gap-3">
+          <p class="text-sm text-neutral-600">{{ s.fullName }} has been removed. Bring them back to put them on the rolls again and switch the parent login back on.</p>
+          <button type="button" (click)="restoreStudent(s)" [disabled]="rosterBusy()"
+            class="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50">
+            {{ rosterBusy() ? 'Restoring…' : 'Restore student' }}
+          </button>
+          <p *ngIf="rosterMsg()" class="w-full text-sm text-error-600" role="alert">{{ rosterMsg() }}</p>
+        </div>
+
         <!-- Right to erasure: only once the student has left -->
-        <div *ngIf="canErase() && s.status === 'TransferredOut'" class="bg-white rounded-xl shadow-sm border border-error-200 p-6">
+        <div *ngIf="canErase() && (s.status === 'TransferredOut' || s.status === 'Removed')" class="bg-white rounded-xl shadow-sm border border-error-200 p-6">
           <h2 class="text-lg font-semibold text-neutral-900">Erase personal data</h2>
           <p class="text-sm text-neutral-600 mt-1">
             {{ s.fullName }} has left the school. If the family asks, you can erase their personal
-            details. This removes the name, date of birth, gender, address and parent contacts. It
-            closes the student's login, and the parent's too unless a brother or sister still uses
-            it. Transfer certificates and report cards are deleted. Marks, attendance and fee
+            details. This removes the name, date of birth, gender, address and both parents'
+            details, and closes the parent login unless a brother or sister still uses it. Transfer certificates and report cards are deleted. Marks, attendance and fee
             records stay, under the admission number only. <strong>This can't be undone.</strong>
           </p>
           <ng-container *ngIf="!showErase(); else eraseForm">
@@ -426,6 +465,10 @@ export class StudentDetailComponent implements OnInit {
   payMsg = signal('');
   payOk = signal(false);
 
+  readonly academicYear = CURRENT_ACADEMIC_YEAR;
+  assessing = signal(false);
+  assessMsg = signal('');
+  assessOk = signal(false);
   canSubmitFees = (): boolean => this.auth.hasRole('SuperAdmin', 'Principal', 'Admin', 'Accountant');
   canManageAccount = (): boolean => this.auth.hasRole('SuperAdmin', 'Principal', 'Admin');
   canErase = (): boolean => this.auth.hasRole('SuperAdmin', 'Principal');
@@ -438,8 +481,6 @@ export class StudentDetailComponent implements OnInit {
   // once from Identity.API. The password is the opposite: never retrievable once set
   // (one-way hashed), so this only ever holds a password the owner just typed THIS
   // session, immediately after a successful reset -- never anything read from storage.
-  loginId = signal<string | null>(null);
-  justSetPassword = signal<string | null>(null);
 
   parentLoginId = signal<string | null>(null);
   parentCredentials = signal<{ username: string; password: string } | null>(null);
@@ -448,16 +489,16 @@ export class StudentDetailComponent implements OnInit {
   parentBusy = signal(false);
   parentMsg = signal('');
 
-  showPasswordForm = signal(false);
-  newPassword = '';
-  settingPassword = signal(false);
-  passwordMsg = signal('');
-  passwordOk = signal(false);
+  showRemove = signal(false);
+  removeReason = '';
+  rosterBusy = signal(false);
+  rosterMsg = signal('');
+  statusLabel = studentStatusLabel;
 
   showEditForm = signal(false);
   editForm = {
     admissionNumber: '', fullName: '', dateOfBirth: '', gender: '', classId: '', sectionId: '',
-    parentName: '', parentEmail: '', parentPhone: '', address: '',
+    fatherName: '', fatherPhone: '', fatherEmail: '', motherName: '', motherPhone: '', motherEmail: '', address: '',
   };
   savingEdit = signal(false);
   editMsg = signal('');
@@ -494,12 +535,6 @@ export class StudentDetailComponent implements OnInit {
       next: (s) => {
         this.student.set(s);
         this.loading.set(false);
-        if (s.linkedUserId && this.canManageAccount()) {
-          this.usersService.get(s.linkedUserId).subscribe({
-            next: (u) => this.loginId.set((u['username'] as string) || u.email),
-            error: () => {},
-          });
-        }
         this.loadParentLogin(s);
       },
       error: (err) => { this.error.set(this.msg(err, 'Failed to load the student.')); this.loading.set(false); },
@@ -609,6 +644,24 @@ export class StudentDetailComponent implements OnInit {
     });
   }
 
+  assessClassFees(s: Student): void {
+    if (!s.classId) return;
+    const before = this.fees().length;
+    this.assessing.set(true); this.assessMsg.set('');
+    this.feesService.assessDues(s.id, { classId: s.classId, academicYear: this.academicYear }).subscribe({
+      next: (list) => {
+        this.assessing.set(false);
+        this.fees.set(list ?? []); this.syncPaymentTarget();
+        const added = (list?.length ?? 0) - before;
+        this.assessOk.set(added > 0);
+        this.assessMsg.set(added > 0
+          ? `Added ${added} fee${added === 1 ? '' : 's'}. Pending is now ₹${this.pendingTotal()}.`
+          : `Nothing new to add. Check that ${this.className(s.classId)} has a fee structure for ${this.academicYear} under Fees.`);
+      },
+      error: (err) => { this.assessing.set(false); this.assessOk.set(false); this.assessMsg.set(this.msg(err, 'Could not add the fees.')); },
+    });
+  }
+
   private afterPayment(message: string): void {
     this.paying.set(false); this.payOk.set(true); this.payMsg.set(message);
     this.payForm.description = '';
@@ -631,9 +684,13 @@ export class StudentDetailComponent implements OnInit {
       gender: (s['gender'] as string) ?? '',
       classId: s.classId ?? '',
       sectionId: s.sectionId ?? '',
-      parentName: s['parentName'] as string ?? s.guardianName ?? '',
-      parentEmail: s['parentEmail'] as string ?? '',
-      parentPhone: s['parentPhone'] as string ?? s.guardianPhone ?? '',
+      // Older records kept one guardian; offer it as the father's details to start from.
+      fatherName: s.fatherName ?? s.parentName ?? '',
+      fatherPhone: s.fatherPhone ?? s.parentPhone ?? '',
+      fatherEmail: s.fatherEmail ?? s.parentEmail ?? '',
+      motherName: s.motherName ?? '',
+      motherPhone: s.motherPhone ?? '',
+      motherEmail: s.motherEmail ?? '',
       address: s['address'] as string ?? '',
     };
     this.showEditForm.set(true);
@@ -646,6 +703,10 @@ export class StudentDetailComponent implements OnInit {
       this.editOk.set(false); this.editMsg.set('Admission number, full name, date of birth, gender, class and section are required.');
       return;
     }
+    if (!f.fatherName.trim() || !f.fatherPhone.trim() || !f.motherName.trim() || !f.motherPhone.trim()) {
+      this.editOk.set(false); this.editMsg.set("Father's and mother's name and mobile number are required.");
+      return;
+    }
     this.savingEdit.set(true); this.editMsg.set('');
     this.studentsService.update(this.id, {
       admissionNumber: f.admissionNumber.trim(),
@@ -654,9 +715,12 @@ export class StudentDetailComponent implements OnInit {
       gender: f.gender,
       classId: f.classId,
       sectionId: f.sectionId,
-      parentName: f.parentName.trim() || undefined,
-      parentEmail: f.parentEmail.trim() || undefined,
-      parentPhone: f.parentPhone.trim() || undefined,
+      fatherName: f.fatherName.trim(),
+      fatherPhone: f.fatherPhone.trim(),
+      fatherEmail: f.fatherEmail.trim() || undefined,
+      motherName: f.motherName.trim(),
+      motherPhone: f.motherPhone.trim(),
+      motherEmail: f.motherEmail.trim() || undefined,
       address: f.address.trim() || undefined,
     }).subscribe({
       next: (updated) => {
@@ -675,24 +739,27 @@ export class StudentDetailComponent implements OnInit {
     });
   }
 
-  resetPassword(s: Student): void {
-    const linkedUserId = s.linkedUserId;
-    if (!linkedUserId) { this.passwordOk.set(false); this.passwordMsg.set('This student has no linked login account.'); return; }
-    if (!this.newPassword || this.newPassword.length < 10) {
-      this.passwordOk.set(false); this.passwordMsg.set('Password must be at least 10 characters.');
-      return;
-    }
-    this.settingPassword.set(true); this.passwordMsg.set('');
-    const justSet = this.newPassword;
-    this.usersService.setPassword(linkedUserId, justSet).subscribe({
-      next: () => {
-        this.settingPassword.set(false); this.passwordOk.set(true);
-        this.justSetPassword.set(justSet); // shown in the credentials banner above -- this run only
-        this.newPassword = '';
-        this.showPasswordForm.set(false);
-        this.toast.success('Login password reset. New credentials shown above.');
+  removeStudent(s: Student): void {
+    this.rosterBusy.set(true); this.rosterMsg.set('');
+    this.studentsService.remove(s.id, this.removeReason).subscribe({
+      next: (updated) => {
+        this.rosterBusy.set(false); this.showRemove.set(false); this.removeReason = '';
+        this.student.set(updated);
+        this.toast.success(`${s.fullName} removed.`);
       },
-      error: (err) => { this.settingPassword.set(false); this.passwordOk.set(false); this.passwordMsg.set(this.msg(err, 'Could not update password.')); },
+      error: (err) => { this.rosterBusy.set(false); this.rosterMsg.set(this.msg(err, 'Could not remove the student.')); },
+    });
+  }
+
+  restoreStudent(s: Student): void {
+    this.rosterBusy.set(true); this.rosterMsg.set('');
+    this.studentsService.restore(s.id).subscribe({
+      next: (updated) => {
+        this.rosterBusy.set(false);
+        this.student.set(updated);
+        this.toast.success(`${s.fullName} is back on the rolls.`);
+      },
+      error: (err) => { this.rosterBusy.set(false); this.rosterMsg.set(this.msg(err, 'Could not restore the student.')); },
     });
   }
 

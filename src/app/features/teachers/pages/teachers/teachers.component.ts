@@ -35,8 +35,14 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
       </div>
 
       <!-- Search -->
-      <div class="flex gap-3">
-        <input [(ngModel)]="keyword" (keyup.enter)="load()" placeholder="Search by name or employee code..."
+      <div class="flex flex-wrap gap-3">
+        <select [(ngModel)]="roster" (ngModelChange)="load()" aria-label="Which staff to show"
+          class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
+          <option value="current">Current staff</option>
+          <option value="removed">Removed staff</option>
+          <option value="all">All staff (current + removed)</option>
+        </select>
+        <input [(ngModel)]="keyword" (keyup.enter)="load()" placeholder="Search by name or employee code..." aria-label="Search staff"
           class="flex-1 px-4 py-2.5 border border-neutral-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
         <button (click)="load()" class="px-4 py-2.5 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Search</button>
       </div>
@@ -113,7 +119,7 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
           <div *ngFor="let i of [1,2,3,4,5,6]" class="skeleton h-11"></div>
         </div>
         <div *ngIf="error()" class="p-8 text-center text-error-600">{{ error() }}</div>
-        <div *ngIf="!loading() && !error() && rows().length === 0" class="p-8 text-center text-neutral-500">No staff yet.</div>
+        <div *ngIf="!loading() && !error() && rows().length === 0" class="p-8 text-center text-neutral-500">{{ roster === 'removed' ? 'No removed staff.' : 'No staff yet.' }}</div>
         <table *ngIf="!loading() && !error() && rows().length > 0" class="w-full text-sm">
           <thead class="bg-neutral-50 text-neutral-600 text-left">
             <tr>
@@ -121,6 +127,7 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
               <th class="px-6 py-3 font-medium">Designation</th>
               <th class="px-6 py-3 font-medium">Class teacher of</th>
               <th class="px-6 py-3 font-medium">Email</th>
+              <th class="px-6 py-3 font-medium">Status</th>
               <th class="px-6 py-3 font-medium"></th>
             </tr>
           </thead>
@@ -136,6 +143,12 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
                 <span *ngIf="!s.classTeacherOfClassId" class="text-neutral-500">—</span>
               </td>
               <td class="px-6 py-3 text-neutral-600">{{ s.email || '—' }}</td>
+              <td class="px-6 py-3">
+                <span class="px-2 py-0.5 rounded-full text-xs font-medium"
+                  [class]="s.status === 'Removed' ? 'bg-neutral-100 text-neutral-600' : 'bg-success-50 text-success-700'">
+                  {{ s.status === 'Removed' ? 'Removed' : 'Current' }}
+                </span>
+              </td>
               <td class="px-6 py-3 text-primary-600 text-right text-xs font-medium">View details →</td>
             </tr>
           </tbody>
@@ -164,6 +177,7 @@ export class TeachersComponent implements OnInit {
   showForm = signal(false);
   lastCredentials = signal<{ username: string; password: string } | null>(null);
   keyword = '';
+  roster: 'current' | 'removed' | 'all' = 'current';
   classes = SCHOOL_CLASSES;
   sections = SCHOOL_SECTIONS;
   className = classNameById;
@@ -181,7 +195,7 @@ export class TeachersComponent implements OnInit {
 
   load(): void {
     this.loading.set(true); this.error.set('');
-    this.service.list({ keyword: this.keyword }).subscribe({
+    this.service.list({ keyword: this.keyword, status: this.roster }).subscribe({
       next: (p) => { this.rows.set(p?.items ?? []); this.loading.set(false); },
       error: (err) => { this.error.set(this.msg(err, 'Failed to load staff.')); this.loading.set(false); },
     });

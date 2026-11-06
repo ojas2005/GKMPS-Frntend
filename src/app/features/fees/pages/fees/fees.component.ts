@@ -7,7 +7,7 @@ import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { FeesService, FeeStructure, FeePayment, StudentPendingSummary, PaymentTransactionSummary } from '../../fees.service';
 import { StudentsService, Student } from '../../../students/students.service';
-import { SCHOOL_CLASSES, DEFAULT_CLASS, classNameById, sectionNameById } from '../../../../core/constants/classes';
+import { SCHOOL_CLASSES, DEFAULT_CLASS, CURRENT_ACADEMIC_YEAR, ACADEMIC_YEAR_CHOICES, classNameById, sectionNameById } from '../../../../core/constants/classes';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { THEMED_FIELDS } from '../../../../shared/forms';
 
@@ -178,7 +178,9 @@ interface SearchPendingRow {
           </div>
           <div>
             <label class="block text-xs text-neutral-500 mb-1" for="fees-f3">Academic year *</label>
-            <input id="fees-f3" [(ngModel)]="form.academicYear" placeholder="2026-27" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <select id="fees-f3" [(ngModel)]="form.academicYear" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
+              <option *ngFor="let y of academicYears" [value]="y">{{ y }}</option>
+            </select>
           </div>
           <div>
             <label class="block text-xs text-neutral-500 mb-1" for="fees-f4">Amount *</label>
@@ -251,7 +253,9 @@ export class FeesComponent implements OnInit {
   classes = SCHOOL_CLASSES;
   className = classNameById;
   sectionName = sectionNameById;
-  form = { name: '', classId: DEFAULT_CLASS.id, academicYear: '', amount: 0, dueDate: '' };
+  form = { name: '', classId: DEFAULT_CLASS.id, academicYear: CURRENT_ACADEMIC_YEAR, amount: 0, dueDate: '' };
+  // A fee structure counts for new admissions in the current year (April to March).
+  academicYears = ACADEMIC_YEAR_CHOICES;
 
   // Pending by class
   pendingClassId = DEFAULT_CLASS.id;
@@ -381,7 +385,7 @@ export class FeesComponent implements OnInit {
       name: this.form.name, classId: this.form.classId, academicYear: this.form.academicYear,
       amount: this.form.amount, dueDateUtc: `${this.form.dueDate}T00:00:00Z`,
     }).subscribe({
-      next: () => { this.saving.set(false); this.showForm.set(false); this.form = { name: '', classId: '', academicYear: '', amount: 0, dueDate: '' }; this.load(); },
+      next: () => { this.saving.set(false); this.showForm.set(false); this.form = { name: '', classId: DEFAULT_CLASS.id, academicYear: CURRENT_ACADEMIC_YEAR, amount: 0, dueDate: '' }; this.load(); },
       error: (err) => { this.saving.set(false); this.formError.set(this.msg(err, 'Could not create.')); },
     });
   }

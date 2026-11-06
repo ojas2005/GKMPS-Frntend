@@ -44,7 +44,7 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
             <select id="communication-f1" [(ngModel)]="audience" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
               <option value="">Everyone</option>
               <option value="Teacher">Teachers only</option>
-              <option value="Student">Students only</option>
+              <option value="Student">Parents (of students)</option>
             </select>
           </div>
           <div *ngIf="audience === 'Student'">
@@ -58,7 +58,7 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
 
         <!-- Teacher: forced scope, no picker -->
         <p *ngIf="!isOwner() && isClassTeacher()" class="text-xs text-neutral-500">
-          This will be sent to the students of <span class="font-medium text-neutral-700">{{ myClassName() }}</span> only.
+          This will be sent to the parents of the students in <span class="font-medium text-neutral-700">{{ myClassName() }}</span> only.
         </p>
 
         <div class="flex items-center gap-3">

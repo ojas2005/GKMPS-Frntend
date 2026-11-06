@@ -36,9 +36,20 @@ export const SCHOOL_SECTIONS: ClassOption[] = [
 export const DEFAULT_CLASS = SCHOOL_CLASSES[SCHOOL_CLASSES.length - 1]; // Class 10
 export const DEFAULT_SECTION = SCHOOL_SECTIONS[0]; // A
 
-// Single source of truth for the academic year used when assessing/creating fee
-// dues, so admissions and fee-structure forms always line up.
-export const CURRENT_ACADEMIC_YEAR = '2026-27';
+// The academic year runs April to March, written "2026-27" -- the same rule the server uses
+// when it puts a class's fees on a new student's account.
+export function academicYearOf(date: Date): string {
+  const start = date.getMonth() >= 3 ? date.getFullYear() : date.getFullYear() - 1;
+  return `${start}-${String((start + 1) % 100).padStart(2, '0')}`;
+}
+
+export const CURRENT_ACADEMIC_YEAR = academicYearOf(new Date());
+
+/** Last year, this year and next, for picking a fee structure's year. */
+export const ACADEMIC_YEAR_CHOICES = [-1, 0, 1].map((n) => {
+  const d = new Date();
+  return academicYearOf(new Date(d.getFullYear() + n, d.getMonth(), 1));
+});
 
 export const classNameById = (id?: string) =>
   SCHOOL_CLASSES.find((c) => c.id === id)?.name ?? id ?? '—';
