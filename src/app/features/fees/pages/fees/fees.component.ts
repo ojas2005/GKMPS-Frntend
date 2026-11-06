@@ -9,6 +9,7 @@ import { FeesService, FeeStructure, FeePayment, StudentPendingSummary, PaymentTr
 import { StudentsService, Student } from '../../../students/students.service';
 import { SCHOOL_CLASSES, DEFAULT_CLASS, classNameById, sectionNameById } from '../../../../core/constants/classes';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { THEMED_FIELDS } from '../../../../shared/forms';
 
 interface PendingRow extends StudentPendingSummary {
   student?: Student;
@@ -23,7 +24,7 @@ interface SearchPendingRow {
 @Component({
   selector: 'app-fees',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, ...THEMED_FIELDS],
   template: `
     <div class="p-6 space-y-6">
       <div class="flex items-center justify-between">

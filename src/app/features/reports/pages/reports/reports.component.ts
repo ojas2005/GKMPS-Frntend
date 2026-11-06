@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ReportsService, EnrollmentReport } from '../../reports.service';
 import { SCHOOL_CLASSES, classNameById } from '../../../../core/constants/classes';
+import { THEMED_FIELDS } from '../../../../shared/forms';
 
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ...THEMED_FIELDS],
   template: `
     <div class="p-6 space-y-6">
       <div>

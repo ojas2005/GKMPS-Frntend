@@ -5,11 +5,12 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TeachersService, Staff, OnboardStaffForm } from '../../teachers.service';
 import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from '../../../../core/constants/classes';
+import { THEMED_FIELDS } from '../../../../shared/forms';
 
 @Component({
   selector: 'app-teachers',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, ...THEMED_FIELDS],
   template: `
     <div class="p-6 space-y-6">
       <div class="flex items-center justify-between">

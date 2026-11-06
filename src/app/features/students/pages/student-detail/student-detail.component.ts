@@ -11,6 +11,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { UsersService } from '../../../../core/services/users.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from '../../../../core/constants/classes';
+import { THEMED_FIELDS } from '../../../../shared/forms';
 
 /**
  * Owner/staff view: everything about one student in one place — profile, attendance
@@ -20,7 +21,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
 @Component({
   selector: 'app-student-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, ...THEMED_FIELDS],
   template: `
     <div class="p-6 space-y-6">
       <div class="flex items-center gap-3">

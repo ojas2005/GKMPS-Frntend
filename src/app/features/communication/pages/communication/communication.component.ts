@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { CommunicationService, Announcement } from '../../communication.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { SCHOOL_CLASSES, classNameById } from '../../../../core/constants/classes';
+import { THEMED_FIELDS } from '../../../../shared/forms';
 
 /**
  * Announcement composer. Owner (SuperAdmin/Principal/Admin) picks an audience —
@@ -15,7 +16,7 @@ import { SCHOOL_CLASSES, classNameById } from '../../../../core/constants/classe
 @Component({
   selector: 'app-communication',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ...THEMED_FIELDS],
   template: `
     <div class="p-6 space-y-6">
       <div class="flex items-center justify-between">

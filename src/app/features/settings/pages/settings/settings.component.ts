@@ -6,6 +6,7 @@ import { UsersService, UserSummary } from '../../../../core/services/users.servi
 import { AuthService } from '../../../../core/auth/auth.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { RoleNames } from '../../../../core/constants/roles';
+import { THEMED_FIELDS } from '../../../../shared/forms';
 
 // Mirrors RoleNames.Rank/CanManageRole on the backend, so the UI only offers actions
 // the API will accept: the owner manages everyone, others only roles below their own.
@@ -15,7 +16,7 @@ const rank = (role?: string | null) => (role ? RANK[role] ?? 0 : 0);
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, ...THEMED_FIELDS],
   template: `
     <div class="p-6 space-y-6">
       <div class="flex flex-wrap items-center justify-between gap-3">

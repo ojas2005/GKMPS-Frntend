@@ -10,6 +10,7 @@ import {
 import { TeachersService, Staff } from '../../../teachers/teachers.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from '../../../../core/constants/classes';
+import { THEMED_FIELDS } from '../../../../shared/forms';
 
 /**
  * One page, three faces:
@@ -23,7 +24,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
 @Component({
   selector: 'app-timetable',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ...THEMED_FIELDS],
   template: `
     <div class="p-6 space-y-6">
       <div>

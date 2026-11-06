@@ -5,11 +5,12 @@ import { AcademicsService, Subject, Homework } from '../../academics.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classNameById, sectionNameById } from '../../../../core/constants/classes';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { THEMED_FIELDS } from '../../../../shared/forms';
 
 @Component({
   selector: 'app-academics',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ...THEMED_FIELDS],
   template: `
     <div class="p-6 space-y-6">
       <div>

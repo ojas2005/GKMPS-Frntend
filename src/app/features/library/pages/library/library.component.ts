@@ -8,11 +8,12 @@ import { StudentsService, Student } from '../../../students/students.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { classNameById, sectionNameById } from '../../../../core/constants/classes';
+import { THEMED_FIELDS } from '../../../../shared/forms';
 
 @Component({
   selector: 'app-library',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ...THEMED_FIELDS],
   template: `
     <div class="p-6 space-y-6">
       <div class="flex flex-wrap items-center justify-between gap-3">

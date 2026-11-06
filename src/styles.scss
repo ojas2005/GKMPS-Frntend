@@ -153,11 +153,12 @@ button {
     box-shadow 0.25s ease,
     transform 0.16s cubic-bezier(0.22, 0.9, 0.35, 1) !important;
 
-  &:not(:disabled):hover {
+  /* Form-field buttons (themed selects, dates, calendar days) stay put like inputs do. */
+  &:not(:disabled):not(.themed-trigger):not(.themed-panel *):hover {
     transform: translateY(-1px);
   }
 
-  &:not(:disabled):active {
+  &:not(:disabled):not(.themed-trigger):not(.themed-panel *):active {
     transform: translateY(0) scale(0.95);
     transition-duration: 0.06s;
   }
@@ -185,7 +186,7 @@ button {
 }
 
 /* Outline buttons (they all carry `border`): primary fill slides in. */
-button.border:not(:disabled) {
+button.border:not(:disabled):not(.themed-trigger) {
   background-image: linear-gradient(90deg, theme('colors.primary.500'), theme('colors.primary.600'));
   background-repeat: no-repeat;
   background-position: left center;
@@ -363,6 +364,227 @@ select {
   background-size: 1.05rem;
 
   &::-ms-expand { display: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Themed form controls (src/app/shared/forms)
+   Every <select> and <input type="date"> is drawn as a button in the field's own
+   classes plus `.themed-trigger`; its option list / calendar opens in an overlay
+   (`.themed-panel`) instead of the browser's boxed popup.
+   -------------------------------------------------------------------------- */
+$chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+$chevron-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23a1a1aa' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+$calendar: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280' stroke-width='1.8'%3E%3Crect x='3.5' y='5' width='17' height='15.5' rx='2.5'/%3E%3Cpath stroke-linecap='round' d='M3.5 10h17M8 3v4M16 3v4'/%3E%3C/svg%3E");
+$calendar-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23a1a1aa' stroke-width='1.8'%3E%3Crect x='3.5' y='5' width='17' height='15.5' rx='2.5'/%3E%3Cpath stroke-linecap='round' d='M3.5 10h17M8 3v4M16 3v4'/%3E%3C/svg%3E");
+
+/* The native field stays in the page for its bindings; the button is what people use. */
+.themed-native {
+  display: none !important;
+}
+
+button.themed-trigger {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  text-align: left;
+  font-weight: 400;
+  background-color: #ffffff;
+  color: theme('colors.neutral.900');
+  padding-right: 2.5rem !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.75rem center !important;
+  background-size: 1.05rem !important;
+  transition: border-color 0.2s ease, box-shadow 0.25s ease, background-color 0.2s ease !important;
+
+  &::after { display: none; }   /* no click ripple on a field */
+
+  &.themed-select { background-image: $chevron !important; }
+  &.themed-date   { background-image: $calendar !important; min-width: 9.5rem; }
+
+  &:hover:not(:disabled) { border-color: theme('colors.neutral.400'); }
+
+  &:focus-visible,
+  &[aria-expanded="true"] {
+    outline: none;
+    border-color: theme('colors.primary.500');
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.18);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    background-color: theme('colors.neutral.100');
+    color: theme('colors.neutral.500');
+  }
+
+  &.is-placeholder .themed-trigger-value { color: theme('colors.neutral.400'); }
+}
+
+.themed-trigger-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Popups */
+.themed-overlay {
+  max-width: calc(100vw - 16px);
+}
+
+/* The overlay pane is a flex row; let the list stretch to the field's width. */
+app-select-panel,
+app-calendar-panel {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.themed-panel {
+  background-color: #ffffff;
+  border: 1px solid theme('colors.neutral.200');
+  border-radius: 0.75rem;
+  box-shadow: 0 18px 40px -12px rgba(15, 23, 42, 0.28), 0 4px 10px -4px rgba(15, 23, 42, 0.12);
+  color: theme('colors.neutral.900');
+  font-size: 0.875rem;
+  animation: pop-in 0.16s cubic-bezier(0.22, 0.9, 0.35, 1) backwards;
+  transform-origin: top left;
+}
+
+.themed-listbox {
+  max-height: min(18rem, 50vh);
+  overflow-y: auto;
+  padding: 0.3rem;
+  margin: 0;
+  list-style: none;
+  overscroll-behavior: contain;
+
+  li[role="option"] {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    line-height: 1.25rem;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .themed-option-text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+  .themed-option-check { width: 1rem; height: 1rem; flex: none; color: theme('colors.primary.600'); }
+  .is-active { background-color: theme('colors.primary.50'); }
+  .is-selected { color: theme('colors.primary.700'); font-weight: 600; }
+  .is-placeholder { color: theme('colors.neutral.500'); }
+  .is-disabled { opacity: 0.45; cursor: not-allowed; }
+  .themed-option-empty { padding: 0.6rem 0.75rem; color: theme('colors.neutral.500'); }
+}
+
+.themed-calendar {
+  width: 18.5rem;
+  max-width: calc(100vw - 16px);
+  padding: 0.75rem;
+
+  button {
+    font: inherit;
+    color: inherit;
+    border-radius: 0.5rem;
+    background: transparent;
+    &::after { display: none; }
+    &:focus-visible { outline: 2px solid theme('colors.primary.500'); outline-offset: 1px; }
+    &:disabled { opacity: 0.35; cursor: not-allowed; }
+  }
+
+  .cal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+
+  .cal-nav {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    color: theme('colors.neutral.600');
+    svg { width: 1.1rem; height: 1.1rem; }
+    &:hover { background-color: theme('colors.neutral.100'); color: theme('colors.neutral.900'); }
+  }
+
+  .cal-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.35rem 0.6rem;
+    font-weight: 600;
+    svg { width: 0.95rem; height: 0.95rem; color: theme('colors.neutral.500'); }
+    &:hover { background-color: theme('colors.neutral.100'); }
+  }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+
+  .cal-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.35rem;
+    padding: 0.25rem 0;
+  }
+
+  .cal-weekdays span {
+    text-align: center;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: theme('colors.neutral.500');
+    padding: 0.25rem 0;
+  }
+
+  .cal-day,
+  .cal-cell {
+    &:hover:not(:disabled):not(.is-selected) { background-color: theme('colors.primary.50'); color: theme('colors.primary.700'); }
+    &.is-today:not(.is-selected) { box-shadow: inset 0 0 0 1.5px theme('colors.primary.500'); color: theme('colors.primary.700'); font-weight: 600; }
+    &.is-selected { background-color: theme('colors.primary.600'); color: #ffffff; font-weight: 600; }
+  }
+
+  .cal-day {
+    height: 2.25rem;
+    font-variant-numeric: tabular-nums;
+    &.is-outside:not(.is-selected) { color: theme('colors.neutral.400'); }
+  }
+
+  .cal-cell { padding: 0.7rem 0; }
+
+  .cal-foot {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid theme('colors.neutral.200');
+  }
+
+  .cal-link {
+    padding: 0.35rem 0.6rem;
+    font-weight: 600;
+    color: theme('colors.primary.600');
+    &:hover:not(:disabled) { background-color: theme('colors.primary.50'); }
+  }
+  .cal-link-muted { color: theme('colors.neutral.600'); }
+}
+
+/* Other native controls: no spinner boxes on number fields, theme-coloured ticks. */
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: theme('colors.primary.600');
+  background-color: transparent;
 }
 
 /* --------------------------------------------------------------------------
@@ -602,10 +824,54 @@ main {
     background-size: 1.05rem !important;
   }
 
+  /* Native widgets (checkboxes, scrollbars inside popups) follow the dark theme. */
+  color-scheme: dark;
+
+  button.themed-trigger {
+    background-color: #27272a !important;
+    color: #f4f4f5 !important;
+    border-color: #52525b;
+    &.themed-select { background-image: $chevron-dark !important; }
+    &.themed-date   { background-image: $calendar-dark !important; }
+    &:hover:not(:disabled) { border-color: #71717a; }
+    &:focus-visible, &[aria-expanded="true"] { border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.22); }
+    &:disabled { background-color: #1f1f23 !important; color: #8b8b93 !important; }
+    &.is-placeholder .themed-trigger-value { color: #8b8b93; }
+  }
+
+  .themed-panel {
+    background-color: #232327;
+    border-color: #3f3f46;
+    color: #f4f4f5;
+    box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  }
+
+  .themed-listbox {
+    .is-active { background-color: rgba(56, 189, 248, 0.14); }
+    .is-selected { color: #7dd3fc; }
+    .themed-option-check { color: #38bdf8; }
+    .is-placeholder, .themed-option-empty { color: #8b8b93; }
+  }
+
+  .themed-calendar {
+    .cal-nav { color: #a1a1aa; &:hover { background-color: #3f3f46; color: #f4f4f5; } }
+    .cal-title:hover { background-color: #3f3f46; }
+    .cal-title svg, .cal-weekdays span { color: #8b8b93; }
+    .cal-day, .cal-cell {
+      &:hover:not(:disabled):not(.is-selected) { background-color: rgba(56, 189, 248, 0.14); color: #7dd3fc; }
+      &.is-today:not(.is-selected) { box-shadow: inset 0 0 0 1.5px #38bdf8; color: #7dd3fc; }
+      &.is-selected { background-color: #0284c7; color: #ffffff; }
+    }
+    .cal-day.is-outside:not(.is-selected) { color: #5f5f68; }
+    .cal-foot { border-top-color: #3f3f46; }
+    .cal-link { color: #38bdf8; &:hover:not(:disabled) { background-color: rgba(56, 189, 248, 0.14); } }
+    .cal-link-muted { color: #a1a1aa; }
+  }
+
   /* Nav / button fills already carry their own colors; keep hover text white. */
   nav a:hover, nav a:hover span,
   nav a.bg-primary-50, nav a.bg-primary-50 span,
-  button.border:not(:disabled):hover {
+  button.border:not(:disabled):not(.themed-trigger):hover {
     color: #fff !important;
   }
 

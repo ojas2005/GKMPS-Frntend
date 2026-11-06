@@ -5,6 +5,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TeachersService, Staff, Payout, StaffAttendanceRecord, PendingSalary } from '../../teachers.service';
 import { UsersService } from '../../../../core/services/users.service';
 import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from '../../../../core/constants/classes';
+import { THEMED_FIELDS } from '../../../../shared/forms';
 
 /**
  * Owner/admin view of one staff member: profile, class-teacher assignment,
@@ -13,7 +14,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
 @Component({
   selector: 'app-teacher-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, ...THEMED_FIELDS],
   template: `
     <div class="p-6 space-y-6">
       <a routerLink="/teachers" class="text-primary-600 hover:text-primary-700 text-sm">← Teachers &amp; Staff</a>

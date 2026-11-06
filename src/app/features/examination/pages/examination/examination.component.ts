@@ -6,11 +6,12 @@ import { ExaminationService, Exam, StudentResult } from '../../examination.servi
 import { AcademicsService, Subject } from '../../../academics/academics.service';
 import { SCHOOL_CLASSES, DEFAULT_CLASS, classNameById } from '../../../../core/constants/classes';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { THEMED_FIELDS } from '../../../../shared/forms';
 
 @Component({
   selector: 'app-examination',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ...THEMED_FIELDS],
   template: `
     <div class="p-6 space-y-6">
       <div class="flex items-center justify-between">
