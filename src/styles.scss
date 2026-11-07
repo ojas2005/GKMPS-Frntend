@@ -777,6 +777,10 @@ main {
   .bg-white { background-color: #1f1f23 !important; }
   .bg-neutral-50 { background-color: #18181b !important; }
   .bg-neutral-100 { background-color: #27272a !important; }
+  /* Bar-chart tracks and fills (fee overview) */
+  .bg-neutral-200 { background-color: #3f3f46 !important; }
+  .bg-neutral-300 { background-color: #52525b !important; }
+  .bg-neutral-400 { background-color: #71717a !important; }
 
   /* Hover surfaces */
   .hover\:bg-neutral-50:hover { background-color: #27272a !important; }
@@ -789,6 +793,7 @@ main {
   .text-neutral-500 { color: #8b8b93 !important; }
 
   /* Borders */
+  .border-neutral-100 { border-color: #2e2e33 !important; }
   .border-neutral-200 { border-color: #3f3f46 !important; }
   .border-neutral-300 { border-color: #52525b !important; }
 

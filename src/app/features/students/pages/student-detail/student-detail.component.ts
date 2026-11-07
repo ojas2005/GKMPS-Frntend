@@ -1,27 +1,26 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { openDownload } from '../../../../core/config/runtime-config';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { StudentsService, Student, studentStatusLabel } from '../../students.service';
 import { AttendanceService } from '../../../attendance/attendance.service';
-import { FeesService, FeePayment, PaymentTransactionSummary } from '../../../fees/fees.service';
+import { StudentFeesComponent } from '../../../fees/components/student-fees.component';
 import { ExaminationService, StudentResult } from '../../../examination/examination.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { UsersService } from '../../../../core/services/users.service';
 import { ToastService } from '../../../../core/services/toast.service';
-import { SCHOOL_CLASSES, SCHOOL_SECTIONS, CURRENT_ACADEMIC_YEAR, classNameById, sectionNameById } from '../../../../core/constants/classes';
+import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from '../../../../core/constants/classes';
 import { THEMED_FIELDS } from '../../../../shared/forms';
 
 /**
  * Owner/staff view: everything about one student in one place — profile, attendance
- * percentage, fee ledger with pending amount, a fee-submission form, receipts, and exam
+ * percentage, the fee account (statement, payments, discounts, transport), and exam
  * results. Each panel loads independently so one failing service doesn't blank the page.
  */
 @Component({
   selector: 'app-student-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, ...THEMED_FIELDS],
+  imports: [CommonModule, FormsModule, RouterLink, StudentFeesComponent, ...THEMED_FIELDS],
   template: `
     <div class="p-6 space-y-6">
       <div class="flex items-center gap-3">
@@ -194,120 +193,10 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
           </div>
         </div>
 
+        <!-- Fees: statement, payments, discounts, transport, history -->
+        <app-student-fees [student]="s" />
+
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <!-- Fees -->
-          <div class="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-semibold text-neutral-900">Fees</h2>
-              <span class="text-sm font-semibold" [class]="pendingTotal() > 0 ? 'text-error-600' : 'text-success-600'">
-                {{ pendingTotal() > 0 ? ('Pending ₹' + pendingTotal()) : 'No dues' }}
-              </span>
-            </div>
-            <p *ngIf="feesError()" class="text-error-600 text-sm">{{ feesError() }}</p>
-            <p *ngIf="!feesError() && fees().length === 0" class="text-neutral-500 text-sm">No fee records.</p>
-            <!-- Puts this year's fee structure for the student's class on the account; already-added fees are skipped. -->
-            <div *ngIf="canSubmitFees() && s.status === 'Active'" class="mb-4 flex flex-wrap items-center gap-3 text-sm">
-              <button type="button" (click)="assessClassFees(s)" [disabled]="assessing()"
-                class="px-3 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50 disabled:text-neutral-400">
-                {{ assessing() ? 'Adding…' : 'Assess dues for ' + academicYear }}
-              </button>
-              <span class="text-xs text-neutral-500">Adds any {{ className(s.classId) }} fees for {{ academicYear }} not on the account yet.</span>
-              <span *ngIf="assessMsg()" class="w-full text-sm" [class]="assessOk() ? 'text-success-600' : 'text-error-600'">{{ assessMsg() }}</span>
-            </div>
-            <table *ngIf="fees().length > 0" class="w-full text-sm">
-              <thead class="text-neutral-500 text-left text-xs">
-                <tr><th class="py-2">Fee</th><th class="py-2">Total</th><th class="py-2">Paid</th><th class="py-2">Pending</th><th class="py-2">Status</th></tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let f of fees()" class="border-t border-neutral-100">
-                  <td class="py-2 text-neutral-900">{{ f['feeStructureName'] || f['description'] || 'Fee' }}</td>
-                  <td class="py-2 text-neutral-600">₹{{ total(f) }}</td>
-                  <td class="py-2 text-neutral-600">₹{{ paid(f) }}</td>
-                  <td class="py-2 font-medium" [class]="pending(f) > 0 ? 'text-error-600' : 'text-success-600'">₹{{ pending(f) }}</td>
-                  <td class="py-2 text-neutral-600">{{ f['status'] || '—' }}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <!-- One payment form. The "What is this payment for?" selector is the whole
-                 point: choosing an outstanding due routes to pay() and REDUCES its pending;
-                 "Other / new charge" routes to submitPayment() and logs a fresh fee. It
-                 defaults to the outstanding due, so the common case moves pending as
-                 expected -- no separate "log a fee" path to reach for by mistake. -->
-            <div *ngIf="canSubmitFees()" class="mt-5 pt-4 border-t border-neutral-200">
-              <h3 class="text-sm font-semibold text-neutral-900 mb-3">Record a payment</h3>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div class="md:col-span-2">
-                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f15">What is this payment for? *</label>
-                  <select id="student-detail-f15" [(ngModel)]="payForm.target" (ngModelChange)="onTargetChange()" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
-                    <option *ngFor="let d of outstandingDues()" [ngValue]="d.id">
-                      {{ d['feeStructureName'] || d['description'] || 'Fee' }} — ₹{{ pending(d) }} pending
-                    </option>
-                    <option [ngValue]="'new'">Other / a new charge not listed above</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f16">Amount (₹) *</label>
-                  <input id="student-detail-f16" [(ngModel)]="payForm.amount" type="number" min="0.01" [max]="selectedDuePending()" placeholder="5000" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
-                  <p *ngIf="payForm.target !== 'new' && selectedDuePending() !== null" class="text-xs text-neutral-500 mt-1">Up to ₹{{ selectedDuePending() }} outstanding on this fee.</p>
-                </div>
-                <div>
-                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f17">Payment method</label>
-                  <select id="student-detail-f17" [(ngModel)]="payForm.paymentMethod" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
-                    <option>Cash</option><option>Card</option><option>UPI</option><option>BankTransfer</option>
-                  </select>
-                </div>
-
-                <!-- A new charge needs its own description + period; paying an existing due does not. -->
-                <ng-container *ngIf="payForm.target === 'new'">
-                  <div class="md:col-span-2">
-                    <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f18">Description *</label>
-                    <input id="student-detail-f18" [(ngModel)]="payForm.description" placeholder="e.g. Tuition fee, exam fee" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
-                  </div>
-                  <div class="md:col-span-2">
-                    <label class="block text-xs text-neutral-500 mb-1">Fee duration *</label>
-                    <div class="flex items-center gap-1.5">
-                      <select [(ngModel)]="payForm.startMonth" class="px-2 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
-                        <option *ngFor="let m of months" [ngValue]="m.value">{{ m.label }}</option>
-                      </select>
-                      <select [(ngModel)]="payForm.startYear" class="px-2 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
-                        <option *ngFor="let y of years" [ngValue]="y">{{ y }}</option>
-                      </select>
-                      <span class="text-neutral-500 text-xs">to</span>
-                      <select [(ngModel)]="payForm.endMonth" class="px-2 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
-                        <option *ngFor="let m of months" [ngValue]="m.value">{{ m.label }}</option>
-                      </select>
-                      <select [(ngModel)]="payForm.endYear" class="px-2 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
-                        <option *ngFor="let y of years" [ngValue]="y">{{ y }}</option>
-                      </select>
-                    </div>
-                  </div>
-                </ng-container>
-              </div>
-              <div class="mt-3 flex items-center gap-3">
-                <button (click)="recordPayment()" [disabled]="paying()"
-                  class="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">
-                  {{ paying() ? 'Saving...' : 'Record payment' }}
-                </button>
-                <span *ngIf="payMsg()" class="text-sm" [class]="payOk() ? 'text-success-600' : 'text-error-600'">{{ payMsg() }}</span>
-              </div>
-            </div>
-
-            <!-- Receipts -->
-            <div class="mt-5 pt-4 border-t border-neutral-200">
-              <h3 class="text-sm font-semibold text-neutral-900 mb-2">Receipts</h3>
-              <p *ngIf="transactions().length === 0" class="text-neutral-500 text-sm">No payments recorded yet.</p>
-              <div *ngFor="let t of transactions()" class="flex items-center justify-between py-1.5 text-sm border-t border-neutral-100 first:border-t-0">
-                <div>
-                  <span class="text-neutral-900">{{ t.periodLabel || t.feeStructureName || t.description || 'Fee' }}</span>
-                  <span class="text-neutral-500"> · ₹{{ t.amount }} · {{ t.paidAtUtc | date:'mediumDate' }}</span>
-                </div>
-                <button (click)="downloadReceipt(t.id)" class="text-primary-600 hover:text-primary-700 text-xs font-medium">Download →</button>
-              </div>
-            </div>
-          </div>
-
           <!-- Results -->
           <div class="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
             <h2 class="text-lg font-semibold text-neutral-900 mb-4">Exam results</h2>
@@ -329,7 +218,6 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
               </tbody>
             </table>
           </div>
-        </div>
 
         <!-- Recent attendance -->
         <div class="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
@@ -343,6 +231,7 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
               {{ a['date'] }} · {{ a['status'] }}
             </span>
           </div>
+        </div>
         </div>
 
         <!-- Remove from the rolls / bring back (office) -->
@@ -425,7 +314,6 @@ export class StudentDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private studentsService = inject(StudentsService);
   private attendanceService = inject(AttendanceService);
-  private feesService = inject(FeesService);
   private examsService = inject(ExaminationService);
   private auth = inject(AuthService);
   private usersService = inject(UsersService);
@@ -437,39 +325,9 @@ export class StudentDetailComponent implements OnInit {
   attendancePct = signal<number | null>(null);
   attendance = signal<Record<string, unknown>[]>([]);
   attError = signal('');
-  fees = signal<FeePayment[]>([]);
-  feesError = signal('');
   results = signal<StudentResult[]>([]);
   resultsError = signal('');
 
-  transactions = signal<PaymentTransactionSummary[]>([]);
-  months = [
-    { value: 1, label: 'Jan' }, { value: 2, label: 'Feb' }, { value: 3, label: 'Mar' },
-    { value: 4, label: 'Apr' }, { value: 5, label: 'May' }, { value: 6, label: 'Jun' },
-    { value: 7, label: 'Jul' }, { value: 8, label: 'Aug' }, { value: 9, label: 'Sep' },
-    { value: 10, label: 'Oct' }, { value: 11, label: 'Nov' }, { value: 12, label: 'Dec' },
-  ];
-  years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 1 + i);
-
-  // One form for every payment. `target` is either a FeePayment.id (pay down that due) or
-  // 'new' (log a brand-new charge). Defaults to the outstanding due in syncPaymentTarget().
-  payForm = {
-    target: '' as string,
-    amount: 0,
-    description: '',
-    startMonth: new Date().getMonth() + 1, startYear: new Date().getFullYear(),
-    endMonth: new Date().getMonth() + 1, endYear: new Date().getFullYear(),
-    paymentMethod: 'Cash',
-  };
-  paying = signal(false);
-  payMsg = signal('');
-  payOk = signal(false);
-
-  readonly academicYear = CURRENT_ACADEMIC_YEAR;
-  assessing = signal(false);
-  assessMsg = signal('');
-  assessOk = signal(false);
-  canSubmitFees = (): boolean => this.auth.hasRole('SuperAdmin', 'Principal', 'Admin', 'Accountant');
   canManageAccount = (): boolean => this.auth.hasRole('SuperAdmin', 'Principal', 'Admin');
   canErase = (): boolean => this.auth.hasRole('SuperAdmin', 'Principal');
   showErase = signal(false);
@@ -510,14 +368,6 @@ export class StudentDetailComponent implements OnInit {
   sectionName = sectionNameById;
 
   dob = (s: Student): string | null => (s['dateOfBirthUtc'] as string) || (s['dateOfBirth'] as string) || null;
-  total = (f: FeePayment): number => Number(f['totalAmount'] ?? f['amount'] ?? 0);
-  paid = (f: FeePayment): number => Number(f['paidAmount'] ?? 0);
-  pending = (f: FeePayment): number =>
-    Math.max(0, this.total(f) - this.paid(f) - Number(f['waiverAmount'] ?? 0));
-  pendingTotal = (): number => this.fees().reduce((sum, f) => sum + this.pending(f), 0);
-  outstandingDues = (): FeePayment[] => this.fees().filter((f) => this.pending(f) > 0);
-  selectedDue = (): FeePayment | null => this.fees().find((f) => f.id === this.payForm.target) ?? null;
-  selectedDuePending = (): number | null => { const d = this.selectedDue(); return d ? this.pending(d) : null; };
   pctClass = (): string => {
     const p = this.attendancePct();
     return p === null ? 'text-neutral-500' : p >= 75 ? 'text-success-600' : 'text-error-600';
@@ -552,128 +402,10 @@ export class StudentDetailComponent implements OnInit {
       next: (list: any) => this.attendance.set(list ?? []),
       error: (err) => this.attError.set(this.msg(err, 'Failed to load attendance.')),
     });
-    this.feesService.myPayments(id).subscribe({
-      next: (list) => { this.fees.set(list ?? []); this.syncPaymentTarget(); },
-      error: (err) => this.feesError.set(this.msg(err, 'Failed to load fees.')),
-    });
     this.examsService.studentResults(id).subscribe({
       next: (list) => this.results.set(list ?? []),
       error: (err) => this.resultsError.set(this.msg(err, 'Failed to load results.')),
     });
-    this.loadTransactions();
-  }
-
-  loadTransactions(): void {
-    this.feesService.transactionsForStudent(this.id).subscribe({
-      next: (list) => this.transactions.set(list ?? []),
-      error: () => {},
-    });
-  }
-
-  private monthLabel(month: number, year: number): string {
-    return new Date(year, month - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-  }
-
-  private periodLabel(): string {
-    const start = this.monthLabel(this.payForm.startMonth, this.payForm.startYear);
-    if (this.payForm.startMonth === this.payForm.endMonth && this.payForm.startYear === this.payForm.endYear) {
-      return start;
-    }
-    return `${start} - ${this.monthLabel(this.payForm.endMonth, this.payForm.endYear)}`;
-  }
-
-  // Point the form at the first outstanding due (or "new" if everything is settled) and
-  // prefill the amount. Called on load and after every payment so the default is always
-  // "pay down what's owed".
-  private syncPaymentTarget(): void {
-    const dues = this.outstandingDues();
-    this.payForm.target = dues.length > 0 ? dues[0].id : 'new';
-    this.onTargetChange();
-  }
-
-  // Selecting a due prefills its full pending amount; "new" clears it for manual entry.
-  onTargetChange(): void {
-    const d = this.selectedDue();
-    this.payForm.amount = d ? this.pending(d) : 0;
-    this.payMsg.set('');
-  }
-
-  recordPayment(): void {
-    const s = this.student();
-    if (!s?.classId) { this.payOk.set(false); this.payMsg.set('Student has no class on record.'); return; }
-    if (!this.payForm.amount || this.payForm.amount <= 0) {
-      this.payOk.set(false); this.payMsg.set('Enter a positive amount.');
-      return;
-    }
-
-    if (this.payForm.target === 'new') {
-      if (!this.payForm.description.trim()) {
-        this.payOk.set(false); this.payMsg.set('Add a description for the new charge.');
-        return;
-      }
-      this.paying.set(true); this.payMsg.set('');
-      this.feesService.submitPayment(this.id, {
-        classId: s.classId,
-        amount: this.payForm.amount,
-        periodLabel: this.periodLabel(),
-        description: this.payForm.description.trim(),
-        paymentMethod: this.payForm.paymentMethod,
-      }).subscribe({
-        next: () => this.afterPayment('New charge recorded and receipt generated.'),
-        error: (err) => this.paymentError(err),
-      });
-      return;
-    }
-
-    const due = this.selectedDue();
-    if (!due) { this.payOk.set(false); this.payMsg.set('Choose what this payment is for.'); return; }
-    const maxPending = this.pending(due);
-    if (this.payForm.amount > maxPending) {
-      this.payOk.set(false); this.payMsg.set(`That's more than the ₹${maxPending} outstanding on this fee.`);
-      return;
-    }
-    this.paying.set(true); this.payMsg.set('');
-    this.feesService.pay({
-      studentId: this.id,
-      feePaymentId: due.id,
-      amount: this.payForm.amount,
-      paymentMethod: this.payForm.paymentMethod,
-    }).subscribe({
-      next: () => this.afterPayment('Payment recorded.'),
-      error: (err) => this.paymentError(err),
-    });
-  }
-
-  assessClassFees(s: Student): void {
-    if (!s.classId) return;
-    const before = this.fees().length;
-    this.assessing.set(true); this.assessMsg.set('');
-    this.feesService.assessDues(s.id, { classId: s.classId, academicYear: this.academicYear }).subscribe({
-      next: (list) => {
-        this.assessing.set(false);
-        this.fees.set(list ?? []); this.syncPaymentTarget();
-        const added = (list?.length ?? 0) - before;
-        this.assessOk.set(added > 0);
-        this.assessMsg.set(added > 0
-          ? `Added ${added} fee${added === 1 ? '' : 's'}. Pending is now ₹${this.pendingTotal()}.`
-          : `Nothing new to add. Check that ${this.className(s.classId)} has a fee structure for ${this.academicYear} under Fees.`);
-      },
-      error: (err) => { this.assessing.set(false); this.assessOk.set(false); this.assessMsg.set(this.msg(err, 'Could not add the fees.')); },
-    });
-  }
-
-  private afterPayment(message: string): void {
-    this.paying.set(false); this.payOk.set(true); this.payMsg.set(message);
-    this.payForm.description = '';
-    this.feesService.myPayments(this.id).subscribe({
-      next: (list) => { this.fees.set(list ?? []); this.syncPaymentTarget(); },
-      error: () => {},
-    });
-    this.loadTransactions();
-  }
-
-  private paymentError(err: any): void {
-    this.paying.set(false); this.payOk.set(false); this.payMsg.set(this.msg(err, 'Could not record the payment.'));
   }
 
   startEdit(s: Student): void {
@@ -818,13 +550,6 @@ export class StudentDetailComponent implements OnInit {
         this.toast.success('Parent login unlinked. Deactivate the account from Settings if it is no longer needed.');
       },
       error: (err) => { this.parentBusy.set(false); this.parentMsg.set(this.msg(err, 'Could not unlink the parent login.')); },
-    });
-  }
-
-  downloadReceipt(transactionId: string): void {
-    this.feesService.receipt(transactionId).subscribe({
-      next: (link) => openDownload(link?.downloadUrl),
-      error: () => {},
     });
   }
 
