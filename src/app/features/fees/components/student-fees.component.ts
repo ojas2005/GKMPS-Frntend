@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, input } from '@angular/core';
+import { Component, OnInit, inject, signal, input, effect, untracked } from '@angular/core';
 import { Observable } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -15,7 +15,7 @@ type Action = { kind: 'pay' | 'discount'; entry: FeeEntry } | { kind: 'charge' }
 
 const HISTORY_LABELS: Record<string, string> = {
   Concession: 'Concession', WaiverApproved: 'Waiver approved', ChargeAdded: 'Charge added', Repriced: 'Re-priced',
-  AccountOpened: 'Account opened', AccountClosed: 'Billing stopped', AccountReopened: 'Billing resumed',
+  AccountOpened: 'Account opened', AccountClosed: 'Billing stopped', AccountReopened: 'Billing resumed', TransportChanged: 'Transport',
 };
 
 /**
@@ -260,6 +260,22 @@ export class StudentFeesComponent implements OnInit {
   statusClass = feeStatusClass;
   statusLabel = feeStatusLabel;
   historyLabel = (k: string) => HISTORY_LABELS[k] ?? k;
+
+  constructor() {
+    // Removing, restoring or moving the student changes their fees on the server (billing
+    // stops or resumes, upcoming exam fees are re-priced). That happens just after the change,
+    // in the background, so reload a moment later.
+    let last: string | null = null;
+    effect((onCleanup) => {
+      const s = this.student();
+      const key = `${s.status}|${s.classId}`;
+      if (last !== null && key !== last) {
+        const timer = setTimeout(() => untracked(() => this.load()), 1500);
+        onCleanup(() => clearTimeout(timer));
+      }
+      last = key;
+    });
+  }
 
   ngOnInit(): void { this.load(); }
 

@@ -44,16 +44,21 @@ type LedgerMode = 'entries' | 'students';
             <option value="">All fee types</option>
             <option *ngFor="let c of categories" [value]="c">{{ categoryLabel(c) }}</option>
           </select>
+          <ng-container *ngIf="mode() === 'entries'">
           <select [(ngModel)]="q.status" (ngModelChange)="search()" aria-label="Payment status" class="px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
-            <option value="">Any status</option>
-            <option value="Outstanding">Unpaid</option>
-            <option value="Overdue">Overdue</option>
-            <option value="Pending">Pending</option>
-            <option value="PartiallyPaid">Partially paid</option>
-            <option value="Paid">Paid</option>
-          </select>
-          <label class="flex items-center gap-2 text-sm text-neutral-700 px-1">
-            <input type="checkbox" [(ngModel)]="q.includeUpcoming" (ngModelChange)="search()"> Include upcoming
+              <option value="">Any status</option>
+              <option value="Outstanding">Unpaid</option>
+              <option value="Overdue">Overdue</option>
+              <option value="Pending">Pending</option>
+              <option value="PartiallyPaid">Partially paid</option>
+              <option value="Paid">Paid</option>
+            </select>
+            <label class="flex items-center gap-2 text-sm text-neutral-700 px-1">
+              <input type="checkbox" [(ngModel)]="q.includeUpcoming" (ngModelChange)="search()"> Include upcoming
+            </label>
+          </ng-container>
+          <label *ngIf="mode() === 'students'" class="flex items-center gap-2 text-sm text-neutral-700 px-1">
+            <input type="checkbox" [(ngModel)]="onlyOwing" (ngModelChange)="search()"> Only students with dues now
           </label>
         </div>
       </div>
@@ -159,6 +164,8 @@ export class FeeLedgerComponent implements OnInit {
 
   q: Required<Pick<FeeEntryQuery, 'keyword' | 'classId' | 'academicYear' | 'month' | 'category' | 'status'>> & { includeUpcoming: boolean } = this.blank();
 
+  /** By-student list: hide students who owe nothing now. Totals there always cover every fee. */
+  onlyOwing = true;
   entries = signal<FeeEntry[]>([]);
   balances = signal<StudentFeeBalance[]>([]);
   total = signal(0);
@@ -192,6 +199,9 @@ export class FeeLedgerComponent implements OnInit {
     this.loading.set(true); this.error.set('');
     const query: FeeEntryQuery = { ...this.q, page: this.page(), pageSize: this.pageSize };
     if (this.mode() === 'students') {
+      // A student's balance counts every fee -- paid, part-paid and upcoming -- so the
+      // fee-list status filters don't apply; "only students with dues" picks the rows instead.
+      Object.assign(query, { status: '', includeUpcoming: true, onlyOwing: this.onlyOwing });
       this.fees.studentBalances(query).subscribe({
         next: (r) => { this.balances.set(r?.items ?? []); this.total.set(r?.totalCount ?? 0); this.loading.set(false); },
         error: (err) => { this.error.set(apiError(err, 'Failed to load balances.')); this.loading.set(false); },

@@ -144,6 +144,8 @@ export interface FeeEntryQuery {
   month?: string; // yyyy-MM
   status?: string; // Pending | PartiallyPaid | Paid | Outstanding | Overdue
   includeUpcoming?: boolean;
+  /** By-student list: only students who owe something now. */
+  onlyOwing?: boolean;
   page?: number;
   pageSize?: number;
 }

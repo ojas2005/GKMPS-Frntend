@@ -156,11 +156,11 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
             <div class="flex gap-3" role="radiogroup" aria-labelledby="transport-q">
               <label class="flex items-center gap-2 px-4 py-2 border rounded-lg text-sm cursor-pointer"
                 [class]="form.needsTransport ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-neutral-300 text-neutral-700'">
-                <input type="radio" name="needsTransport" [value]="true" [(ngModel)]="form.needsTransport" (ngModelChange)="onTransportChange()"> Yes
+                <input type="radio" name="needsTransport" [value]="true" aria-label="Yes, needs transportation" [(ngModel)]="form.needsTransport" (ngModelChange)="onTransportChange()"> Yes
               </label>
               <label class="flex items-center gap-2 px-4 py-2 border rounded-lg text-sm cursor-pointer"
                 [class]="!form.needsTransport ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-neutral-300 text-neutral-700'">
-                <input type="radio" name="needsTransport" [value]="false" [(ngModel)]="form.needsTransport" (ngModelChange)="onTransportChange()"> No
+                <input type="radio" name="needsTransport" [value]="false" aria-label="No transportation" [(ngModel)]="form.needsTransport" (ngModelChange)="onTransportChange()"> No
               </label>
             </div>
           </div>
@@ -364,6 +364,7 @@ export class StudentsComponent implements OnInit, OnDestroy {
 
   /** Recalculates the fee summary for the chosen class, route and previous dues (debounced). */
   refreshPreview(): void {
+    this.formError.set(''); // a stale "choose a route" etc. shouldn't outlive the change that fixed it
     if (this.previewTimer) clearTimeout(this.previewTimer);
     this.previewTimer = setTimeout(() => this.loadPreview(), 250);
   }
