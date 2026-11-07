@@ -17,11 +17,26 @@ export interface AuthResult {
   staffId?: string | null;
   classTeacherOfClassId?: string | null;
   classTeacherOfSectionId?: string | null;
+  // Minutes of inactivity before the app signs the user out.
+  sessionIdleTimeoutMinutes?: number | null;
+  // Password was right but an authenticator code is still needed (no tokens yet).
+  twoFactorRequired?: boolean;
+  twoFactorChallenge?: string | null;
+  // A step the user must finish before using the app.
+  pendingAction?: PendingAction | null;
 }
+
+export type PendingAction = 'change-password' | 'setup-two-factor';
+
+/** What signing in with a password led to. */
+export type LoginOutcome =
+  | { kind: 'signed-in'; user: CurrentUser }
+  | { kind: 'two-factor'; challenge: string };
 
 export interface LoginRequest {
   loginId: string; // username (e.g. "ownerishim") or email
   password: string;
+  rememberMe?: boolean; // "Keep me signed in on this device"
 }
 
 export interface RefreshRequest {
@@ -41,4 +56,5 @@ export interface CurrentUser {
   staffId?: string | null;
   classTeacherOfClassId?: string | null;
   classTeacherOfSectionId?: string | null;
+  pendingAction?: PendingAction | null;
 }

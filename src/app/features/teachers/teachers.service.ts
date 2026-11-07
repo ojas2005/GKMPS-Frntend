@@ -19,6 +19,7 @@ export interface Staff {
   classTeacherOfClassId?: string | null;
   classTeacherOfSectionId?: string | null;
   monthlySalary?: number | null;
+  removedAtUtc?: string | null;
   [key: string]: unknown;
 }
 
@@ -75,6 +76,8 @@ export interface OnboardedStaff {
 export interface StaffQuery {
   designation?: string;
   keyword?: string;
+  /** current (default), removed, or all. */
+  status?: 'current' | 'removed' | 'all';
   page?: number;
   pageSize?: number;
 }
@@ -86,6 +89,16 @@ export class TeachersService {
 
   list(query: StaffQuery = {}): Observable<PagedResult<Staff>> {
     return this.api.get('/api/staff', { page: 1, pageSize: 20, ...query });
+  }
+
+  /** Removes a staff member: their login is switched off and they leave class-teacher duty and every list. */
+  remove(id: string): Observable<Staff> {
+    return this.api.post(`/api/staff/${id}/remove`, {});
+  }
+
+  /** Brings a removed staff member back and switches their login on again. */
+  restore(id: string): Observable<Staff> {
+    return this.api.post(`/api/staff/${id}/restore`, {});
   }
 
   get(id: string): Observable<Staff> {

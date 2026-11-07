@@ -1,15 +1,17 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { openDownload } from '../../../../core/config/runtime-config';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { StudentsService, Student } from '../../students.service';
+import { StudentsService, Student, studentStatusLabel } from '../../students.service';
 import { AttendanceService } from '../../../attendance/attendance.service';
 import { FeesService, FeePayment, PaymentTransactionSummary } from '../../../fees/fees.service';
 import { ExaminationService, StudentResult } from '../../../examination/examination.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { UsersService } from '../../../../core/services/users.service';
 import { ToastService } from '../../../../core/services/toast.service';
-import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from '../../../../core/constants/classes';
+import { SCHOOL_CLASSES, SCHOOL_SECTIONS, CURRENT_ACADEMIC_YEAR, classNameById, sectionNameById } from '../../../../core/constants/classes';
+import { THEMED_FIELDS } from '../../../../shared/forms';
 
 /**
  * Owner/staff view: everything about one student in one place — profile, attendance
@@ -19,7 +21,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
 @Component({
   selector: 'app-student-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, ...THEMED_FIELDS],
   template: `
     <div class="p-6 space-y-6">
       <div class="flex items-center gap-3">
@@ -38,7 +40,10 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
               <p class="text-neutral-600 text-sm mt-1">
                 {{ className(s.classId) }} - {{ sectionName(s.sectionId) }}
                 &nbsp;·&nbsp; Admission # {{ s.admissionNumber || '—' }}
-                &nbsp;·&nbsp; {{ s.status || 'Active' }}
+                &nbsp;·&nbsp; {{ statusLabel(s.status) }}
+              </p>
+              <p *ngIf="s.status === 'Removed'" class="text-sm text-neutral-500 mt-1">
+                Removed{{ s.removedAtUtc ? ' on ' + (s.removedAtUtc | date:'mediumDate') : '' }}{{ s.removalReason ? ' — ' + s.removalReason : '' }}
               </p>
             </div>
             <div class="text-right text-3xl font-bold" [class]="pctClass()">
@@ -49,20 +54,21 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 text-sm">
             <div><span class="text-neutral-500 block text-xs">Gender</span>{{ s['gender'] || '—' }}</div>
             <div><span class="text-neutral-500 block text-xs">Date of birth</span>{{ dob(s) ? (dob(s) | date:'mediumDate') : '—' }}</div>
-            <div><span class="text-neutral-500 block text-xs">Guardian</span>{{ s['parentName'] || s.guardianName || '—' }}</div>
-            <div><span class="text-neutral-500 block text-xs">Guardian phone</span>{{ s['parentPhone'] || s.guardianPhone || '—' }}</div>
-            <div *ngIf="canManageAccount()">
-              <span class="text-neutral-500 block text-xs">Login ID</span>
-              <span class="font-mono">{{ loginId() || '—' }}</span>
-            </div>
-          </div>
-
-          <!-- New credentials just set (password reset or first look). Password is only ever
-               shown here, right after being typed/set -- never retrieved from storage. -->
-          <div *ngIf="justSetPassword()" class="mt-4 bg-success-50 border border-success-500 rounded-xl p-4 text-sm text-success-800">
-            <p class="font-semibold mb-1">Password updated — hand these to the student:</p>
-            <p>Login ID: <span class="font-mono font-bold">{{ loginId() }}</span>
-               &nbsp;·&nbsp; Password: <span class="font-mono font-bold">{{ justSetPassword() }}</span></p>
+            <div><span class="text-neutral-500 block text-xs">Address</span>{{ s.address || '—' }}</div>
+            <div></div>
+            <ng-container *ngIf="s.fatherName || s.motherName; else legacyGuardian">
+              <div><span class="text-neutral-500 block text-xs">Father</span>{{ s.fatherName || '—' }}</div>
+              <div><span class="text-neutral-500 block text-xs">Father's mobile</span>{{ s.fatherPhone || '—' }}
+                <span *ngIf="s.fatherEmail" class="block text-xs text-neutral-500">{{ s.fatherEmail }}</span></div>
+              <div><span class="text-neutral-500 block text-xs">Mother</span>{{ s.motherName || '—' }}</div>
+              <div><span class="text-neutral-500 block text-xs">Mother's mobile</span>{{ s.motherPhone || '—' }}
+                <span *ngIf="s.motherEmail" class="block text-xs text-neutral-500">{{ s.motherEmail }}</span></div>
+            </ng-container>
+            <ng-template #legacyGuardian>
+              <div><span class="text-neutral-500 block text-xs">Guardian</span>{{ s.parentName || '—' }}</div>
+              <div><span class="text-neutral-500 block text-xs">Guardian phone</span>{{ s.parentPhone || '—' }}</div>
+              <p *ngIf="canManageAccount()" class="col-span-2 text-xs text-warning-700">Father's and mother's details are missing — add them with "Edit details".</p>
+            </ng-template>
           </div>
 
           <!-- Edit details (Admin/Principal/SuperAdmin only) -->
@@ -71,53 +77,65 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
               class="text-primary-600 hover:text-primary-700 text-sm font-medium">Edit details</button>
             <div *ngIf="showEditForm()" class="reveal-panel">
               <h3 class="text-sm font-semibold text-neutral-900 mb-1">Edit student details</h3>
-              <p class="text-xs text-neutral-500 mb-3">Everything collected at admission. Login ID and password aren't changed here — use "Reset login password" below for that.</p>
+              <p class="text-xs text-neutral-500 mb-3">Everything collected at admission. The parent login is managed below.</p>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Full name *</label>
-                  <input [(ngModel)]="editForm.fullName" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f1">Full name *</label>
+                  <input id="student-detail-f1" [(ngModel)]="editForm.fullName" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Admission number *</label>
-                  <input [(ngModel)]="editForm.admissionNumber" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f2">Admission number *</label>
+                  <input id="student-detail-f2" [(ngModel)]="editForm.admissionNumber" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Date of birth *</label>
-                  <input [(ngModel)]="editForm.dateOfBirth" type="date" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f3">Date of birth *</label>
+                  <input id="student-detail-f3" [(ngModel)]="editForm.dateOfBirth" type="date" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Gender *</label>
-                  <select [(ngModel)]="editForm.gender" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f4">Gender *</label>
+                  <select id="student-detail-f4" [(ngModel)]="editForm.gender" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
                     <option>Male</option><option>Female</option><option>Other</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Class *</label>
-                  <select [(ngModel)]="editForm.classId" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f5">Class *</label>
+                  <select id="student-detail-f5" [(ngModel)]="editForm.classId" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
                     <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Section *</label>
-                  <select [(ngModel)]="editForm.sectionId" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f6">Section *</label>
+                  <select id="student-detail-f6" [(ngModel)]="editForm.sectionId" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
                     <option *ngFor="let sec of sections" [value]="sec.id">Section {{ sec.name }}</option>
                   </select>
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Guardian name</label>
-                  <input [(ngModel)]="editForm.parentName" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f7">Father's name *</label>
+                  <input id="student-detail-f7" [(ngModel)]="editForm.fatherName" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Guardian phone</label>
-                  <input [(ngModel)]="editForm.parentPhone" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f8">Father's mobile number *</label>
+                  <input id="student-detail-f8" [(ngModel)]="editForm.fatherPhone" type="tel" inputmode="numeric" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Guardian email</label>
-                  <input [(ngModel)]="editForm.parentEmail" type="email" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f9">Father's email</label>
+                  <input id="student-detail-f9" [(ngModel)]="editForm.fatherEmail" type="email" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Address</label>
-                  <input [(ngModel)]="editForm.address" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f11">Mother's name *</label>
+                  <input id="student-detail-f11" [(ngModel)]="editForm.motherName" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f15">Mother's mobile number *</label>
+                  <input id="student-detail-f15" [(ngModel)]="editForm.motherPhone" type="tel" inputmode="numeric" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f16">Mother's email</label>
+                  <input id="student-detail-f16" [(ngModel)]="editForm.motherEmail" type="email" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f10">Address</label>
+                  <input id="student-detail-f10" [(ngModel)]="editForm.address" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
               </div>
               <div class="mt-3 flex items-center gap-3">
@@ -129,28 +147,6 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
                 <span *ngIf="editMsg()" class="text-sm" [class]="editOk() ? 'text-success-600' : 'text-error-600'">{{ editMsg() }}</span>
               </div>
 
-              <!-- Password reset stays available -- it's a distinct, Identity.API-owned
-                   action (login credentials), not part of this admission-details record. -->
-              <div class="mt-4 pt-4 border-t border-neutral-100">
-                <button *ngIf="!showPasswordForm()" (click)="showPasswordForm.set(true)" type="button"
-                  class="text-primary-600 hover:text-primary-700 text-xs font-medium">Reset login password</button>
-                <div *ngIf="showPasswordForm()" class="reveal-panel">
-                  <h4 class="text-xs font-semibold text-neutral-900 mb-1">Reset login password</h4>
-                  <p class="text-xs text-neutral-500 mb-3">An existing password can never be shown again once set (it's stored one-way hashed, same as everywhere else) — set a new one here and it'll be displayed once, right above, so you can hand it over. This signs the student out everywhere.</p>
-                  <div class="flex flex-wrap items-end gap-3">
-                    <div>
-                      <label class="block text-xs text-neutral-500 mb-1">New password (min 8 chars) *</label>
-                      <input [(ngModel)]="newPassword" type="text" placeholder="e.g. Student@456" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
-                    </div>
-                    <button (click)="resetPassword(s)" [disabled]="settingPassword()"
-                      class="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">
-                      {{ settingPassword() ? 'Saving...' : 'Set password' }}
-                    </button>
-                    <button (click)="showPasswordForm.set(false); newPassword = ''; passwordMsg.set('')" type="button" class="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50">Cancel</button>
-                    <span *ngIf="passwordMsg() && !passwordOk()" class="text-sm text-error-600">{{ passwordMsg() }}</span>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -168,8 +164,8 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
               </div>
               <div class="mt-2 flex flex-wrap items-end gap-3">
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">New parent password</label>
-                  <input [(ngModel)]="parentNewPassword" type="text" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f12">New parent password</label>
+                  <input id="student-detail-f12" [(ngModel)]="parentNewPassword" type="text" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <button (click)="resetParentPassword(s)" [disabled]="parentBusy()"
                   class="px-4 py-2 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-50 disabled:text-neutral-400">Reset password</button>
@@ -181,12 +177,12 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
               <p class="text-xs text-neutral-500 mb-2">No parent login yet. Create one so the parent can follow attendance, results and fees.</p>
               <div class="flex flex-wrap items-end gap-3">
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Parent login ID *</label>
-                  <input [(ngModel)]="parentForm.username" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f13">Parent login ID *</label>
+                  <input id="student-detail-f13" [(ngModel)]="parentForm.username" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Password (min 8 chars) *</label>
-                  <input [(ngModel)]="parentForm.password" type="text" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f14">Password (min 10 chars) *</label>
+                  <input id="student-detail-f14" [(ngModel)]="parentForm.password" type="text" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <button (click)="createParentLogin(s)" [disabled]="parentBusy()"
                   class="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">
@@ -209,6 +205,15 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
             </div>
             <p *ngIf="feesError()" class="text-error-600 text-sm">{{ feesError() }}</p>
             <p *ngIf="!feesError() && fees().length === 0" class="text-neutral-500 text-sm">No fee records.</p>
+            <!-- Puts this year's fee structure for the student's class on the account; already-added fees are skipped. -->
+            <div *ngIf="canSubmitFees() && s.status === 'Active'" class="mb-4 flex flex-wrap items-center gap-3 text-sm">
+              <button type="button" (click)="assessClassFees(s)" [disabled]="assessing()"
+                class="px-3 py-1.5 border border-neutral-300 rounded-lg hover:bg-neutral-50 disabled:text-neutral-400">
+                {{ assessing() ? 'Adding…' : 'Assess dues for ' + academicYear }}
+              </button>
+              <span class="text-xs text-neutral-500">Adds any {{ className(s.classId) }} fees for {{ academicYear }} not on the account yet.</span>
+              <span *ngIf="assessMsg()" class="w-full text-sm" [class]="assessOk() ? 'text-success-600' : 'text-error-600'">{{ assessMsg() }}</span>
+            </div>
             <table *ngIf="fees().length > 0" class="w-full text-sm">
               <thead class="text-neutral-500 text-left text-xs">
                 <tr><th class="py-2">Fee</th><th class="py-2">Total</th><th class="py-2">Paid</th><th class="py-2">Pending</th><th class="py-2">Status</th></tr>
@@ -233,8 +238,8 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
               <h3 class="text-sm font-semibold text-neutral-900 mb-3">Record a payment</h3>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div class="md:col-span-2">
-                  <label class="block text-xs text-neutral-500 mb-1">What is this payment for? *</label>
-                  <select [(ngModel)]="payForm.target" (ngModelChange)="onTargetChange()" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f15">What is this payment for? *</label>
+                  <select id="student-detail-f15" [(ngModel)]="payForm.target" (ngModelChange)="onTargetChange()" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
                     <option *ngFor="let d of outstandingDues()" [ngValue]="d.id">
                       {{ d['feeStructureName'] || d['description'] || 'Fee' }} — ₹{{ pending(d) }} pending
                     </option>
@@ -243,13 +248,13 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
                 </div>
 
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Amount (₹) *</label>
-                  <input [(ngModel)]="payForm.amount" type="number" min="0.01" [max]="selectedDuePending()" placeholder="5000" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
-                  <p *ngIf="payForm.target !== 'new' && selectedDuePending() !== null" class="text-xs text-neutral-400 mt-1">Up to ₹{{ selectedDuePending() }} outstanding on this fee.</p>
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f16">Amount (₹) *</label>
+                  <input id="student-detail-f16" [(ngModel)]="payForm.amount" type="number" min="0.01" [max]="selectedDuePending()" placeholder="5000" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <p *ngIf="payForm.target !== 'new' && selectedDuePending() !== null" class="text-xs text-neutral-500 mt-1">Up to ₹{{ selectedDuePending() }} outstanding on this fee.</p>
                 </div>
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">Payment method</label>
-                  <select [(ngModel)]="payForm.paymentMethod" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
+                  <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f17">Payment method</label>
+                  <select id="student-detail-f17" [(ngModel)]="payForm.paymentMethod" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
                     <option>Cash</option><option>Card</option><option>UPI</option><option>BankTransfer</option>
                   </select>
                 </div>
@@ -257,8 +262,8 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
                 <!-- A new charge needs its own description + period; paying an existing due does not. -->
                 <ng-container *ngIf="payForm.target === 'new'">
                   <div class="md:col-span-2">
-                    <label class="block text-xs text-neutral-500 mb-1">Description *</label>
-                    <input [(ngModel)]="payForm.description" placeholder="e.g. Tuition fee, exam fee" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                    <label class="block text-xs text-neutral-500 mb-1" for="student-detail-f18">Description *</label>
+                    <input id="student-detail-f18" [(ngModel)]="payForm.description" placeholder="e.g. Tuition fee, exam fee" class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                   </div>
                   <div class="md:col-span-2">
                     <label class="block text-xs text-neutral-500 mb-1">Fee duration *</label>
@@ -269,7 +274,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
                       <select [(ngModel)]="payForm.startYear" class="px-2 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
                         <option *ngFor="let y of years" [ngValue]="y">{{ y }}</option>
                       </select>
-                      <span class="text-neutral-400 text-xs">to</span>
+                      <span class="text-neutral-500 text-xs">to</span>
                       <select [(ngModel)]="payForm.endMonth" class="px-2 py-2 border border-neutral-300 rounded-lg text-sm bg-white">
                         <option *ngFor="let m of months" [ngValue]="m.value">{{ m.label }}</option>
                       </select>
@@ -339,6 +344,79 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
             </span>
           </div>
         </div>
+
+        <!-- Remove from the rolls / bring back (office) -->
+        <div *ngIf="canManageAccount() && s.status === 'Active'" class="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
+          <h2 class="text-lg font-semibold text-neutral-900">Remove student</h2>
+          <p class="text-sm text-neutral-600 mt-1">
+            Takes {{ s.fullName }} off the rolls: they leave class lists, attendance registers and fee
+            lists, and the parent login stops working (unless a brother or sister still uses it).
+            Their records are kept and you can bring them back later. To give a transfer
+            certificate instead, use the Transfer certificate section.
+          </p>
+          <button *ngIf="!showRemove()" type="button" (click)="showRemove.set(true)"
+            class="mt-4 px-4 py-2 rounded-lg border border-neutral-300 text-neutral-700 text-sm font-medium hover:bg-neutral-50">
+            Remove student…
+          </button>
+          <div *ngIf="showRemove()" class="reveal-panel mt-4">
+            <label for="remove-reason" class="block text-xs text-neutral-500 mb-1">Reason (optional)</label>
+            <input id="remove-reason" [(ngModel)]="removeReason" maxlength="500" placeholder="e.g. Left the school, fees unpaid since April"
+              class="w-full max-w-lg px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+            <div class="flex gap-2 mt-3">
+              <button type="button" (click)="removeStudent(s)" [disabled]="rosterBusy()"
+                class="px-4 py-2 rounded-lg bg-error-600 text-white text-sm font-medium hover:bg-error-700 disabled:opacity-50">
+                {{ rosterBusy() ? 'Removing…' : 'Remove ' + s.fullName }}
+              </button>
+              <button type="button" (click)="showRemove.set(false); removeReason = ''"
+                class="px-4 py-2 rounded-lg border border-neutral-300 text-neutral-700 text-sm">Cancel</button>
+            </div>
+          </div>
+          <p *ngIf="rosterMsg()" class="text-sm text-error-600 mt-2" role="alert">{{ rosterMsg() }}</p>
+        </div>
+        <div *ngIf="canManageAccount() && s.status === 'Removed'" class="bg-white rounded-xl shadow-sm border border-neutral-200 p-6 flex flex-wrap items-center justify-between gap-3">
+          <p class="text-sm text-neutral-600">{{ s.fullName }} has been removed. Bring them back to put them on the rolls again and switch the parent login back on.</p>
+          <button type="button" (click)="restoreStudent(s)" [disabled]="rosterBusy()"
+            class="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50">
+            {{ rosterBusy() ? 'Restoring…' : 'Restore student' }}
+          </button>
+          <p *ngIf="rosterMsg()" class="w-full text-sm text-error-600" role="alert">{{ rosterMsg() }}</p>
+        </div>
+
+        <!-- Right to erasure: only once the student has left -->
+        <div *ngIf="canErase() && (s.status === 'TransferredOut' || s.status === 'Removed')" class="bg-white rounded-xl shadow-sm border border-error-200 p-6">
+          <h2 class="text-lg font-semibold text-neutral-900">Erase personal data</h2>
+          <p class="text-sm text-neutral-600 mt-1">
+            {{ s.fullName }} has left the school. If the family asks, you can erase their personal
+            details. This removes the name, date of birth, gender, address and both parents'
+            details, and closes the parent login unless a brother or sister still uses it. Transfer certificates and report cards are deleted. Marks, attendance and fee
+            records stay, under the admission number only. <strong>This can't be undone.</strong>
+          </p>
+          <ng-container *ngIf="!showErase(); else eraseForm">
+            <button type="button" (click)="showErase.set(true)"
+              class="mt-4 px-4 py-2 rounded-lg border border-error-300 text-error-700 text-sm font-medium hover:bg-error-50">
+              Erase personal data…
+            </button>
+          </ng-container>
+          <ng-template #eraseForm>
+            <label for="erase-confirm" class="block text-sm text-neutral-700 mt-4">
+              Type the admission number <span class="font-mono font-semibold">{{ s.admissionNumber }}</span> to confirm
+            </label>
+            <input id="erase-confirm" [(ngModel)]="eraseConfirm" autocomplete="off"
+              class="mt-1 w-full max-w-xs px-3 py-2 border border-neutral-300 rounded-lg text-sm font-mono">
+            <div class="flex gap-2 mt-3">
+              <button type="button" (click)="erase(s)" [disabled]="erasing() || !eraseMatches(s)"
+                class="px-4 py-2 rounded-lg bg-error-600 text-white text-sm font-medium hover:bg-error-700 disabled:opacity-50">
+                {{ erasing() ? 'Erasing…' : 'Erase permanently' }}
+              </button>
+              <button type="button" (click)="showErase.set(false); eraseConfirm = ''"
+                class="px-4 py-2 rounded-lg border border-neutral-300 text-neutral-700 text-sm">Cancel</button>
+            </div>
+            <p *ngIf="eraseMsg()" class="text-sm text-error-600 mt-2" role="alert">{{ eraseMsg() }}</p>
+          </ng-template>
+        </div>
+        <p *ngIf="s.status === 'Erased'" class="text-sm text-neutral-500">
+          This former student's personal data has been erased.
+        </p>
       </ng-container>
     </div>
   `,
@@ -387,15 +465,22 @@ export class StudentDetailComponent implements OnInit {
   payMsg = signal('');
   payOk = signal(false);
 
+  readonly academicYear = CURRENT_ACADEMIC_YEAR;
+  assessing = signal(false);
+  assessMsg = signal('');
+  assessOk = signal(false);
   canSubmitFees = (): boolean => this.auth.hasRole('SuperAdmin', 'Principal', 'Admin', 'Accountant');
   canManageAccount = (): boolean => this.auth.hasRole('SuperAdmin', 'Principal', 'Admin');
+  canErase = (): boolean => this.auth.hasRole('SuperAdmin', 'Principal');
+  showErase = signal(false);
+  eraseConfirm = '';
+  erasing = signal(false);
+  eraseMsg = signal('');
 
   // The login ID is fine to display (it's an identifier, not a secret) and is fetched
   // once from Identity.API. The password is the opposite: never retrievable once set
   // (one-way hashed), so this only ever holds a password the owner just typed THIS
   // session, immediately after a successful reset -- never anything read from storage.
-  loginId = signal<string | null>(null);
-  justSetPassword = signal<string | null>(null);
 
   parentLoginId = signal<string | null>(null);
   parentCredentials = signal<{ username: string; password: string } | null>(null);
@@ -404,16 +489,16 @@ export class StudentDetailComponent implements OnInit {
   parentBusy = signal(false);
   parentMsg = signal('');
 
-  showPasswordForm = signal(false);
-  newPassword = '';
-  settingPassword = signal(false);
-  passwordMsg = signal('');
-  passwordOk = signal(false);
+  showRemove = signal(false);
+  removeReason = '';
+  rosterBusy = signal(false);
+  rosterMsg = signal('');
+  statusLabel = studentStatusLabel;
 
   showEditForm = signal(false);
   editForm = {
     admissionNumber: '', fullName: '', dateOfBirth: '', gender: '', classId: '', sectionId: '',
-    parentName: '', parentEmail: '', parentPhone: '', address: '',
+    fatherName: '', fatherPhone: '', fatherEmail: '', motherName: '', motherPhone: '', motherEmail: '', address: '',
   };
   savingEdit = signal(false);
   editMsg = signal('');
@@ -435,7 +520,7 @@ export class StudentDetailComponent implements OnInit {
   selectedDuePending = (): number | null => { const d = this.selectedDue(); return d ? this.pending(d) : null; };
   pctClass = (): string => {
     const p = this.attendancePct();
-    return p === null ? 'text-neutral-400' : p >= 75 ? 'text-success-600' : 'text-error-600';
+    return p === null ? 'text-neutral-500' : p >= 75 ? 'text-success-600' : 'text-error-600';
   };
 
   private id = '';
@@ -450,12 +535,6 @@ export class StudentDetailComponent implements OnInit {
       next: (s) => {
         this.student.set(s);
         this.loading.set(false);
-        if (s.linkedUserId && this.canManageAccount()) {
-          this.usersService.get(s.linkedUserId).subscribe({
-            next: (u) => this.loginId.set((u['username'] as string) || u.email),
-            error: () => {},
-          });
-        }
         this.loadParentLogin(s);
       },
       error: (err) => { this.error.set(this.msg(err, 'Failed to load the student.')); this.loading.set(false); },
@@ -565,6 +644,24 @@ export class StudentDetailComponent implements OnInit {
     });
   }
 
+  assessClassFees(s: Student): void {
+    if (!s.classId) return;
+    const before = this.fees().length;
+    this.assessing.set(true); this.assessMsg.set('');
+    this.feesService.assessDues(s.id, { classId: s.classId, academicYear: this.academicYear }).subscribe({
+      next: (list) => {
+        this.assessing.set(false);
+        this.fees.set(list ?? []); this.syncPaymentTarget();
+        const added = (list?.length ?? 0) - before;
+        this.assessOk.set(added > 0);
+        this.assessMsg.set(added > 0
+          ? `Added ${added} fee${added === 1 ? '' : 's'}. Pending is now ₹${this.pendingTotal()}.`
+          : `Nothing new to add. Check that ${this.className(s.classId)} has a fee structure for ${this.academicYear} under Fees.`);
+      },
+      error: (err) => { this.assessing.set(false); this.assessOk.set(false); this.assessMsg.set(this.msg(err, 'Could not add the fees.')); },
+    });
+  }
+
   private afterPayment(message: string): void {
     this.paying.set(false); this.payOk.set(true); this.payMsg.set(message);
     this.payForm.description = '';
@@ -587,9 +684,13 @@ export class StudentDetailComponent implements OnInit {
       gender: (s['gender'] as string) ?? '',
       classId: s.classId ?? '',
       sectionId: s.sectionId ?? '',
-      parentName: s['parentName'] as string ?? s.guardianName ?? '',
-      parentEmail: s['parentEmail'] as string ?? '',
-      parentPhone: s['parentPhone'] as string ?? s.guardianPhone ?? '',
+      // Older records kept one guardian; offer it as the father's details to start from.
+      fatherName: s.fatherName ?? s.parentName ?? '',
+      fatherPhone: s.fatherPhone ?? s.parentPhone ?? '',
+      fatherEmail: s.fatherEmail ?? s.parentEmail ?? '',
+      motherName: s.motherName ?? '',
+      motherPhone: s.motherPhone ?? '',
+      motherEmail: s.motherEmail ?? '',
       address: s['address'] as string ?? '',
     };
     this.showEditForm.set(true);
@@ -602,6 +703,10 @@ export class StudentDetailComponent implements OnInit {
       this.editOk.set(false); this.editMsg.set('Admission number, full name, date of birth, gender, class and section are required.');
       return;
     }
+    if (!f.fatherName.trim() || !f.fatherPhone.trim() || !f.motherName.trim() || !f.motherPhone.trim()) {
+      this.editOk.set(false); this.editMsg.set("Father's and mother's name and mobile number are required.");
+      return;
+    }
     this.savingEdit.set(true); this.editMsg.set('');
     this.studentsService.update(this.id, {
       admissionNumber: f.admissionNumber.trim(),
@@ -610,9 +715,12 @@ export class StudentDetailComponent implements OnInit {
       gender: f.gender,
       classId: f.classId,
       sectionId: f.sectionId,
-      parentName: f.parentName.trim() || undefined,
-      parentEmail: f.parentEmail.trim() || undefined,
-      parentPhone: f.parentPhone.trim() || undefined,
+      fatherName: f.fatherName.trim(),
+      fatherPhone: f.fatherPhone.trim(),
+      fatherEmail: f.fatherEmail.trim() || undefined,
+      motherName: f.motherName.trim(),
+      motherPhone: f.motherPhone.trim(),
+      motherEmail: f.motherEmail.trim() || undefined,
       address: f.address.trim() || undefined,
     }).subscribe({
       next: (updated) => {
@@ -631,24 +739,27 @@ export class StudentDetailComponent implements OnInit {
     });
   }
 
-  resetPassword(s: Student): void {
-    const linkedUserId = s.linkedUserId;
-    if (!linkedUserId) { this.passwordOk.set(false); this.passwordMsg.set('This student has no linked login account.'); return; }
-    if (!this.newPassword || this.newPassword.length < 8) {
-      this.passwordOk.set(false); this.passwordMsg.set('Password must be at least 8 characters.');
-      return;
-    }
-    this.settingPassword.set(true); this.passwordMsg.set('');
-    const justSet = this.newPassword;
-    this.usersService.setPassword(linkedUserId, justSet).subscribe({
-      next: () => {
-        this.settingPassword.set(false); this.passwordOk.set(true);
-        this.justSetPassword.set(justSet); // shown in the credentials banner above -- this run only
-        this.newPassword = '';
-        this.showPasswordForm.set(false);
-        this.toast.success('Login password reset. New credentials shown above.');
+  removeStudent(s: Student): void {
+    this.rosterBusy.set(true); this.rosterMsg.set('');
+    this.studentsService.remove(s.id, this.removeReason).subscribe({
+      next: (updated) => {
+        this.rosterBusy.set(false); this.showRemove.set(false); this.removeReason = '';
+        this.student.set(updated);
+        this.toast.success(`${s.fullName} removed.`);
       },
-      error: (err) => { this.settingPassword.set(false); this.passwordOk.set(false); this.passwordMsg.set(this.msg(err, 'Could not update password.')); },
+      error: (err) => { this.rosterBusy.set(false); this.rosterMsg.set(this.msg(err, 'Could not remove the student.')); },
+    });
+  }
+
+  restoreStudent(s: Student): void {
+    this.rosterBusy.set(true); this.rosterMsg.set('');
+    this.studentsService.restore(s.id).subscribe({
+      next: (updated) => {
+        this.rosterBusy.set(false);
+        this.student.set(updated);
+        this.toast.success(`${s.fullName} is back on the rolls.`);
+      },
+      error: (err) => { this.rosterBusy.set(false); this.rosterMsg.set(this.msg(err, 'Could not restore the student.')); },
     });
   }
 
@@ -664,8 +775,8 @@ export class StudentDetailComponent implements OnInit {
   createParentLogin(s: Student): void {
     const username = this.parentForm.username.trim();
     const password = this.parentForm.password;
-    if (!username || password.length < 8) {
-      this.parentMsg.set('Enter a login ID and a password of at least 8 characters.'); return;
+    if (!username || password.length < 10) {
+      this.parentMsg.set('Enter a login ID and a password of at least 10 characters.'); return;
     }
     this.parentBusy.set(true); this.parentMsg.set('');
     this.studentsService.createParentLogin(s, username, password).subscribe({
@@ -684,7 +795,7 @@ export class StudentDetailComponent implements OnInit {
   resetParentPassword(s: Student): void {
     if (!s.parentUserId) return;
     const password = this.parentNewPassword;
-    if (password.length < 8) { this.parentMsg.set('Password must be at least 8 characters.'); return; }
+    if (password.length < 10) { this.parentMsg.set('Password must be at least 10 characters.'); return; }
     this.parentBusy.set(true); this.parentMsg.set('');
     this.usersService.setPassword(s.parentUserId, password).subscribe({
       next: () => {
@@ -712,8 +823,28 @@ export class StudentDetailComponent implements OnInit {
 
   downloadReceipt(transactionId: string): void {
     this.feesService.receipt(transactionId).subscribe({
-      next: (link) => { if (link?.downloadUrl) window.open(link.downloadUrl, '_blank'); },
+      next: (link) => openDownload(link?.downloadUrl),
       error: () => {},
+    });
+  }
+
+  eraseMatches(s: Student): boolean {
+    return !!s.admissionNumber && this.eraseConfirm.trim().toLowerCase() === s.admissionNumber.toLowerCase();
+  }
+
+  erase(s: Student): void {
+    if (!this.eraseMatches(s)) return;
+    this.erasing.set(true); this.eraseMsg.set('');
+    this.studentsService.erasePersonalData(this.id, this.eraseConfirm.trim()).subscribe({
+      next: () => {
+        this.erasing.set(false); this.showErase.set(false); this.eraseConfirm = '';
+        this.toast.success('Personal data erased.');
+        this.studentsService.get(this.id).subscribe({ next: (st) => this.student.set(st) });
+      },
+      error: (err) => {
+        this.erasing.set(false);
+        this.eraseMsg.set(this.msg(err, 'Could not erase the personal data.'));
+      },
     });
   }
 

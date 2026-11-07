@@ -5,16 +5,17 @@ import { AcademicsService, Subject, Homework } from '../../academics.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classNameById, sectionNameById } from '../../../../core/constants/classes';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { THEMED_FIELDS } from '../../../../shared/forms';
 
 @Component({
   selector: 'app-academics',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ...THEMED_FIELDS],
   template: `
     <div class="p-6 space-y-6">
       <div>
         <h1 class="text-2xl font-bold text-neutral-900">Academics</h1>
-        <p class="text-neutral-600 text-sm">{{ selfService ? 'Your subjects, syllabus and homework.' : 'Subjects, syllabus & homework from Academic.API.' }}</p>
+        <p class="text-neutral-600 text-sm">{{ selfService ? (parentView ? "Your child's subjects, syllabus and homework." : 'Your subjects, syllabus and homework.') : 'Subjects, syllabus & homework.' }}</p>
       </div>
 
       <!-- Class picker (staff only; students are locked to their own class) -->
@@ -59,7 +60,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
                 </span>
               </div>
               <p *ngIf="s.syllabusOutline && editingSyllabus !== s.id" class="text-xs text-neutral-600 mt-1 whitespace-pre-line">{{ s.syllabusOutline }}</p>
-              <p *ngIf="!s.syllabusOutline && editingSyllabus !== s.id" class="text-xs text-neutral-400 mt-1">No syllabus added yet.</p>
+              <p *ngIf="!s.syllabusOutline && editingSyllabus !== s.id" class="text-xs text-neutral-500 mt-1">No syllabus added yet.</p>
               <div *ngIf="editingSyllabus === s.id" class="mt-2 space-y-2 reveal-panel">
                 <textarea [(ngModel)]="syllabusDraft" rows="4" placeholder="Chapters / topics / marking scheme..."
                   class="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm"></textarea>
@@ -101,6 +102,8 @@ export class AcademicsComponent implements OnInit {
   private toast = inject(ToastService);
 
   selfService = this.auth.isSelfService();
+
+  parentView = this.auth.isParentView();
   // Creating subjects is an office action; teachers may still edit syllabus and set homework.
   readonly canAddSubject = this.auth.hasRole('SuperAdmin', 'Principal', 'Admin');
   readonly linkedToClass = !!this.auth.classId();

@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { LayoutComponent } from './shared/components/layout/layout.component';
-import { authGuard, roleGuard } from './core/auth/auth.guard';
+import { authGuard, pendingActionGuard, roleGuard } from './core/auth/auth.guard';
 import { rolesFor } from './core/constants/nav';
 
 export const routes: Routes = [
@@ -9,12 +9,19 @@ export const routes: Routes = [
     path: 'auth',
     loadChildren: () => import('./features/auth/auth.routes').then(m => m.AUTH_ROUTES),
   },
+  // The privacy notice is public: families can read it before they have an account.
+  {
+    path: 'privacy',
+    title: 'Privacy notice',
+    loadComponent: () => import('./features/privacy/privacy.component').then(m => m.PrivacyComponent),
+  },
   // Everything else is behind the layout shell, requires login, and each route
   // is additionally gated by role via roleGuard (data.roles from the nav catalog).
   {
     path: '',
     component: LayoutComponent,
-    canActivate: [authGuard],
+    canActivate: [authGuard, pendingActionGuard],
+    canActivateChild: [pendingActionGuard],
     children: [
       {
         path: 'dashboard',

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { CommunicationService, Announcement } from '../../communication.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { SCHOOL_CLASSES, classNameById } from '../../../../core/constants/classes';
+import { THEMED_FIELDS } from '../../../../shared/forms';
 
 /**
  * Announcement composer. Owner (SuperAdmin/Principal/Admin) picks an audience —
@@ -15,7 +16,7 @@ import { SCHOOL_CLASSES, classNameById } from '../../../../core/constants/classe
 @Component({
   selector: 'app-communication',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ...THEMED_FIELDS],
   template: `
     <div class="p-6 space-y-6">
       <div class="flex items-center justify-between">
@@ -39,16 +40,16 @@ import { SCHOOL_CLASSES, classNameById } from '../../../../core/constants/classe
         <!-- Owner: audience picker -->
         <div *ngIf="isOwner()" class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs text-neutral-500 mb-1">Send to</label>
-            <select [(ngModel)]="audience" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
+            <label class="block text-xs text-neutral-500 mb-1" for="communication-f1">Send to</label>
+            <select id="communication-f1" [(ngModel)]="audience" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
               <option value="">Everyone</option>
               <option value="Teacher">Teachers only</option>
-              <option value="Student">Students only</option>
+              <option value="Student">Parents (of students)</option>
             </select>
           </div>
           <div *ngIf="audience === 'Student'">
-            <label class="block text-xs text-neutral-500 mb-1">Limit to one class (optional)</label>
-            <select [(ngModel)]="audienceClassId" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
+            <label class="block text-xs text-neutral-500 mb-1" for="communication-f2">Limit to one class (optional)</label>
+            <select id="communication-f2" [(ngModel)]="audienceClassId" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
               <option value="">All classes</option>
               <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
             </select>
@@ -57,7 +58,7 @@ import { SCHOOL_CLASSES, classNameById } from '../../../../core/constants/classe
 
         <!-- Teacher: forced scope, no picker -->
         <p *ngIf="!isOwner() && isClassTeacher()" class="text-xs text-neutral-500">
-          This will be sent to the students of <span class="font-medium text-neutral-700">{{ myClassName() }}</span> only.
+          This will be sent to the parents of the students in <span class="font-medium text-neutral-700">{{ myClassName() }}</span> only.
         </p>
 
         <div class="flex items-center gap-3">
@@ -78,7 +79,7 @@ import { SCHOOL_CLASSES, classNameById } from '../../../../core/constants/classe
             <span class="text-xs text-neutral-500">{{ a.publishedAtUtc ? (a.publishedAtUtc | date:'medium') : '' }}</span>
           </div>
           <p class="text-neutral-600 text-sm mt-2">{{ a.body }}</p>
-          <p class="text-xs text-neutral-400 mt-2">
+          <p class="text-xs text-neutral-500 mt-2">
             {{ audienceLabel(a) }}
           </p>
         </div>

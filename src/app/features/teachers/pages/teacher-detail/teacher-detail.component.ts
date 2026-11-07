@@ -4,7 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TeachersService, Staff, Payout, StaffAttendanceRecord, PendingSalary } from '../../teachers.service';
 import { UsersService } from '../../../../core/services/users.service';
+import { AuthService } from '../../../../core/auth/auth.service';
 import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from '../../../../core/constants/classes';
+import { THEMED_FIELDS } from '../../../../shared/forms';
 
 /**
  * Owner/admin view of one staff member: profile, class-teacher assignment,
@@ -13,7 +15,7 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
 @Component({
   selector: 'app-teacher-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, ...THEMED_FIELDS],
   template: `
     <div class="p-6 space-y-6">
       <a routerLink="/teachers" class="text-primary-600 hover:text-primary-700 text-sm">← Teachers &amp; Staff</a>
@@ -26,7 +28,8 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
         <div class="bg-white rounded-xl p-6 shadow-sm border border-neutral-200">
           <h1 class="text-2xl font-bold text-neutral-900">{{ s.fullName }}</h1>
           <p class="text-neutral-600 text-sm mt-1">
-            {{ s.designation }} &nbsp;·&nbsp; {{ s.employeeCode }} &nbsp;·&nbsp; {{ s.status || 'Active' }}
+            {{ s.designation }} &nbsp;·&nbsp; {{ s.employeeCode }} &nbsp;·&nbsp; {{ s.status === 'Removed' ? 'Removed' : 'Current' }}
+            <span *ngIf="s.status === 'Removed' && s.removedAtUtc"> on {{ s.removedAtUtc | date:'mediumDate' }}</span>
           </p>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 text-sm">
             <div><span class="text-neutral-500 block text-xs">Email</span>{{ s.email || '—' }}</div>
@@ -50,8 +53,8 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
               <p class="text-xs text-neutral-500 mb-3">Passwords are stored hashed and cannot be viewed — set a new one and hand it to the teacher. This signs them out everywhere.</p>
               <div class="flex flex-wrap items-end gap-3">
                 <div>
-                  <label class="block text-xs text-neutral-500 mb-1">New password (min 8 chars) *</label>
-                  <input [(ngModel)]="newPassword" type="text" placeholder="e.g. Teacher@456" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
+                  <label class="block text-xs text-neutral-500 mb-1" for="teacher-detail-f1">New password (min 10 chars) *</label>
+                  <input id="teacher-detail-f1" [(ngModel)]="newPassword" type="text" placeholder="e.g. mango river lantern" class="w-56 px-3 py-2 border border-neutral-300 rounded-lg text-sm">
                 </div>
                 <button (click)="resetPassword(s)" [disabled]="settingPassword()"
                   class="px-4 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">
@@ -91,8 +94,8 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
           <p class="text-xs text-neutral-500 mb-4">Pending resets to the full monthly salary at the start of each month, minus whatever's paid out below.</p>
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <div>
-              <label class="block text-xs text-neutral-500 mb-1">Monthly salary (₹)</label>
-              <input [(ngModel)]="salaryInput" type="number" min="0" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+              <label class="block text-xs text-neutral-500 mb-1" for="teacher-detail-f2">Monthly salary (₹)</label>
+              <input id="teacher-detail-f2" [(ngModel)]="salaryInput" type="number" min="0" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
             </div>
             <button (click)="saveSalary()" [disabled]="savingSalary()"
               class="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 text-white rounded-lg text-sm font-medium">
@@ -165,6 +168,42 @@ import { SCHOOL_CLASSES, SCHOOL_SECTIONS, classNameById, sectionNameById } from 
             </div>
           </div>
         </div>
+
+        <!-- Remove from the staff / bring back (office) -->
+        <div *ngIf="canRemove" class="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
+          <ng-container *ngIf="s.status !== 'Removed'; else removedStaff">
+            <h2 class="text-lg font-semibold text-neutral-900">Remove staff member</h2>
+            <p class="text-sm text-neutral-600 mt-1">
+              {{ s.fullName }} will no longer be able to sign in, stops being a class teacher, and
+              leaves the staff list and timetables. Their payouts and attendance stay on record, and
+              you can bring them back later.
+            </p>
+            <div class="flex flex-wrap gap-2 mt-4">
+              <button *ngIf="!confirmRemove()" type="button" (click)="confirmRemove.set(true)"
+                class="px-4 py-2 rounded-lg border border-neutral-300 text-neutral-700 text-sm font-medium hover:bg-neutral-50">
+                Remove {{ s.fullName }}…
+              </button>
+              <ng-container *ngIf="confirmRemove()">
+                <button type="button" (click)="removeStaff(s)" [disabled]="rosterBusy()"
+                  class="px-4 py-2 rounded-lg bg-error-600 text-white text-sm font-medium hover:bg-error-700 disabled:opacity-50">
+                  {{ rosterBusy() ? 'Removing…' : 'Yes, remove' }}
+                </button>
+                <button type="button" (click)="confirmRemove.set(false)"
+                  class="px-4 py-2 rounded-lg border border-neutral-300 text-neutral-700 text-sm">Cancel</button>
+              </ng-container>
+            </div>
+          </ng-container>
+          <ng-template #removedStaff>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <p class="text-sm text-neutral-600">{{ s.fullName }} has been removed. Bring them back to switch their login on again.</p>
+              <button type="button" (click)="restoreStaff(s)" [disabled]="rosterBusy()"
+                class="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50">
+                {{ rosterBusy() ? 'Restoring…' : 'Restore staff member' }}
+              </button>
+            </div>
+          </ng-template>
+          <p *ngIf="rosterMsg()" class="text-sm text-error-600 mt-2" role="alert">{{ rosterMsg() }}</p>
+        </div>
       </ng-container>
     </div>
   `,
@@ -173,6 +212,12 @@ export class TeacherDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private service = inject(TeachersService);
   private usersService = inject(UsersService);
+  private auth = inject(AuthService);
+
+  readonly canRemove = this.auth.hasRole('SuperAdmin', 'Principal', 'Admin');
+  confirmRemove = signal(false);
+  rosterBusy = signal(false);
+  rosterMsg = signal('');
 
   staff = signal<Staff | null>(null);
   loading = signal(false);
@@ -323,8 +368,8 @@ export class TeacherDetailComponent implements OnInit {
 
   resetPassword(s: Staff): void {
     if (!s.linkedUserId) { this.passwordOk.set(false); this.passwordMsg.set('This staff member has no linked login account.'); return; }
-    if (!this.newPassword || this.newPassword.length < 8) {
-      this.passwordOk.set(false); this.passwordMsg.set('Password must be at least 8 characters.');
+    if (!this.newPassword || this.newPassword.length < 10) {
+      this.passwordOk.set(false); this.passwordMsg.set('Password must be at least 10 characters.');
       return;
     }
     this.settingPassword.set(true); this.passwordMsg.set('');
@@ -341,5 +386,21 @@ export class TeacherDetailComponent implements OnInit {
   private msg(err: any, fb: string): string {
     if (err?.status === 0) return 'Cannot reach the server. Check your connection and try again.';
     return err?.error?.errors?.[0] || err?.error?.message || fb;
+  }
+
+  removeStaff(s: Staff): void {
+    this.rosterBusy.set(true); this.rosterMsg.set('');
+    this.service.remove(s.id).subscribe({
+      next: (updated) => { this.rosterBusy.set(false); this.confirmRemove.set(false); this.staff.set(updated); },
+      error: (err) => { this.rosterBusy.set(false); this.rosterMsg.set(err?.error?.errors?.[0] || err?.error?.message || 'Could not remove this staff member.'); },
+    });
+  }
+
+  restoreStaff(s: Staff): void {
+    this.rosterBusy.set(true); this.rosterMsg.set('');
+    this.service.restore(s.id).subscribe({
+      next: (updated) => { this.rosterBusy.set(false); this.staff.set(updated); },
+      error: (err) => { this.rosterBusy.set(false); this.rosterMsg.set(err?.error?.errors?.[0] || err?.error?.message || 'Could not restore this staff member.'); },
+    });
   }
 }

@@ -5,6 +5,7 @@ import { ThemeService } from '../../services/theme.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { CommunicationService, Announcement } from '../../../features/communication/communication.service';
 import { classNameById } from '../../../core/constants/classes';
+import { rolesFor } from '../../../core/constants/nav';
 import {
   Menu,
   Bell,
@@ -35,13 +36,15 @@ import {
         </button>
 
         <!-- Search -->
-        <div class="hidden md:flex items-center gap-2 bg-neutral-100 rounded-lg px-3 py-2 max-w-xs">
+        <div *ngIf="canSearchStudents()" class="hidden md:flex items-center gap-2 bg-neutral-100 rounded-lg px-3 py-2 max-w-xs">
           <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
           </svg>
-          <input 
-            type="text" 
-            placeholder="Search..." 
+          <input
+            #searchBox
+            type="text"
+            placeholder="Search students..."
+            (keyup.enter)="searchStudents(searchBox.value)"
             class="bg-transparent outline-none text-sm w-32 placeholder-neutral-400"
           >
         </div>
@@ -51,7 +54,7 @@ import {
       <div class="flex items-center gap-4">
         <!-- Notifications: announcements relevant to me -->
         <div class="relative">
-          <button (click)="toggleAnnouncements()" class="p-2 rounded-lg hover:bg-neutral-100 text-neutral-600 relative transition-colors">
+          <button (click)="toggleAnnouncements()" aria-label="Announcements" [attr.aria-expanded]="showAnnouncements()" class="p-2 rounded-lg hover:bg-neutral-100 text-neutral-600 relative transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
             </svg>
@@ -67,7 +70,7 @@ import {
                 <span *ngIf="a.targetClassId" class="text-xs text-primary-600 whitespace-nowrap">{{ className(a.targetClassId) }}</span>
               </div>
               <p class="text-xs text-neutral-600 mt-0.5 line-clamp-2">{{ a.body }}</p>
-              <p class="text-xs text-neutral-400 mt-1">{{ a.publishedAtUtc | date:'medium' }}</p>
+              <p class="text-xs text-neutral-500 mt-1">{{ a.publishedAtUtc | date:'medium' }}</p>
             </div>
           </div>
         </div>
@@ -95,7 +98,7 @@ import {
           <div class="w-10 h-10 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
             {{ userInitials() }}
           </div>
-          <button 
+          <button aria-label="Account menu" [attr.aria-expanded]="showUserMenu()" 
             (click)="toggleUserMenu()"
             class="p-1 rounded hover:bg-neutral-100 transition-colors"
           >
@@ -147,6 +150,15 @@ export class TopbarComponent implements OnInit {
   showAnnouncements = signal(false);
   announcements = signal<Announcement[]>([]);
   className = classNameById;
+
+  // The magnifier only makes sense for roles that can open the student list.
+  canSearchStudents = computed(() => this.auth.hasRole(...rolesFor('/students')));
+
+  // Enter in the top bar runs the students page's own search via a query param.
+  searchStudents(term: string): void {
+    const q = (term ?? '').trim();
+    this.router.navigate(['/students'], q ? { queryParams: { q } } : {});
+  }
 
   userName = computed(() => this.auth.currentUser()?.fullName ?? 'Guest');
   userRole = computed(() => this.auth.currentUser()?.role ?? '');
