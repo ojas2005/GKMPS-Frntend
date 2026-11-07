@@ -17,12 +17,12 @@
     "@angular/forms": "^20.3.31",
     "@angular/platform-browser": "^20.3.31",
     "@angular/router": "^20.3.31",
-    "autoprefixer": "^10.5.2",
+    "autoprefixer": "^10.6.2",
     "lucide-angular": "^1.0.0",
     "qrcode": "^1.5.4",
     "rxjs": "^7.8.2",
     "tailwindcss": "^3.4.1",
-    "zone.js": "~0.15.1"
+    "zone.js": "~0.16.3"
   },
   "devDependencies": {
     "@angular/build": "^20.3.37",
