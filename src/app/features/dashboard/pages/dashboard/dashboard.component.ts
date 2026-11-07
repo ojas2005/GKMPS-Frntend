@@ -387,7 +387,8 @@ export class DashboardComponent implements OnInit {
       if (studentId) {
         this.fees.myPayments(studentId).subscribe({
           next: (list) => {
-            const pending = (list ?? []).reduce((sum, f) => {
+            // Only fees already due: exam fees created for later in the session aren't payable yet.
+            const pending = (list ?? []).filter((f) => f['isDue'] !== false).reduce((sum, f) => {
               const total = Number(f['totalAmount'] ?? f['amount'] ?? 0);
               const paid = Number(f['paidAmount'] ?? 0);
               const waiver = Number(f['waiverAmount'] ?? 0);

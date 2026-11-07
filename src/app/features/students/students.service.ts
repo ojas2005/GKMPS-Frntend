@@ -4,6 +4,7 @@ import { switchMap, map, catchError } from 'rxjs/operators';
 import { UsersService } from '../../core/services/users.service';
 import { ApiService } from '../../core/http/api.service';
 import { DownloadLink, PagedResult } from '../../core/models/api-response';
+import { FeeBreakdown } from '../fees/fees.service';
 
 export interface Student {
   id: string;
@@ -71,6 +72,10 @@ export interface AdmitStudentForm extends ParentDetails {
   parentUsername: string; // login ID the office gives the parents
   parentPassword: string;
   previousDues?: number;
+  /** Does the student use school transport? Then routeId is required. */
+  needsTransport: boolean;
+  routeId?: string;
+  pickupPoint?: string;
 }
 
 export interface Credentials {
@@ -78,18 +83,10 @@ export interface Credentials {
   password: string;
 }
 
-/** What admission put on the student's fee account. */
-export interface AdmissionFees {
-  academicYear: string;
-  classFees: Array<{ name: string; amount: number }>;
-  previousDues: number;
-  totalPending: number;
-  warning?: string | null;
-}
-
 export interface AdmittedStudent {
   student: Student;
-  fees: AdmissionFees;
+  /** What admission put on the student's fee account. */
+  fees: FeeBreakdown;
   parentCredentials: Credentials;
 }
 
@@ -155,7 +152,7 @@ export class StudentsService {
       .pipe(
         switchMap((res) => {
           parentUserId = res.userId;
-          return this.api.post<{ student: Student; fees: AdmissionFees }>('/api/students', {
+          return this.api.post<{ student: Student; fees: FeeBreakdown }>('/api/students', {
             parentUserId,
             admissionNumber: form.admissionNumber?.trim() || `ADM-${suffix}`,
             fullName: form.fullName.trim(),
@@ -171,6 +168,8 @@ export class StudentsService {
             motherEmail: form.motherEmail?.trim() || undefined,
             address: form.address?.trim() || undefined,
             previousDues: form.previousDues || undefined,
+            routeId: form.needsTransport ? form.routeId : undefined,
+            pickupPoint: form.needsTransport ? form.pickupPoint?.trim() || undefined : undefined,
           });
         }),
         catchError((err) =>

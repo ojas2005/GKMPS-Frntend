@@ -1,11 +1,13 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { StudentsService, Student, AdmitStudentForm, AdmittedStudent, RosterStatus, guardianOf, studentStatusLabel } from '../../students.service';
-import { FeesService, FeeStructure } from '../../../fees/fees.service';
+import { FeesService, FeeBreakdown } from '../../../fees/fees.service';
+import { TransportService, TransportRoute } from '../../../transport/transport.service';
+import { feeCategoryLabel } from '../../../fees/fee-ui';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, CURRENT_ACADEMIC_YEAR, classNameById, sectionNameById } from '../../../../core/constants/classes';
+import { SCHOOL_CLASSES, SCHOOL_SECTIONS, DEFAULT_CLASS, DEFAULT_SECTION, classNameById, sectionNameById } from '../../../../core/constants/classes';
 import { THEMED_FIELDS } from '../../../../shared/forms';
 
 @Component({
@@ -33,10 +35,11 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
              &nbsp;·&nbsp; Password: <span class="font-mono font-bold">{{ a.parentCredentials.password }}</span></p>
           <p class="text-xs">They sign in at this site and choose their own password the first time.</p>
           <p class="pt-1">
-            <span class="font-semibold">Fees for {{ a.fees.academicYear }}:</span>
-            <ng-container *ngFor="let f of a.fees.classFees; let last = last">{{ f.name }} {{ f.amount | currency:'INR':'symbol':'1.0-0' }}{{ last ? '' : ' · ' }}</ng-container>
-            <ng-container *ngIf="a.fees.previousDues"> · Previous dues {{ a.fees.previousDues | currency:'INR':'symbol':'1.0-0' }}</ng-container>
-            &nbsp;— pending <span class="font-semibold">{{ a.fees.totalPending | currency:'INR':'symbol':'1.0-0' }}</span>
+            <span class="font-semibold">Fee account opened for {{ a.fees.academicYear }}:</span>
+            payable now <span class="font-semibold">{{ a.fees.initialPending | currency:'INR':'symbol':'1.0-0' }}</span>
+            <ng-container *ngIf="a.fees.upcomingTotal"> · {{ a.fees.upcomingTotal | currency:'INR':'symbol':'1.0-0' }} due later this session</ng-container>
+            · {{ a.fees.monthlyTotal | currency:'INR':'symbol':'1.0-0' }} a month{{ a.fees.transport ? ' (incl. ' + a.fees.transport.routeName + ')' : '' }}.
+            <a [routerLink]="['/students', a.student.id]" class="underline font-medium">Open the fee statement</a>
           </p>
           <p *ngIf="a.fees.warning" class="text-warning-700 font-medium">{{ a.fees.warning }}</p>
         </div>
@@ -83,7 +86,7 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
           </div>
           <div>
             <label class="block text-xs text-neutral-500 mb-1" for="students-f5">Class *</label>
-            <select id="students-f5" [(ngModel)]="form.classId" (ngModelChange)="loadClassFees()" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
+            <select id="students-f5" [(ngModel)]="form.classId" (ngModelChange)="refreshPreview()" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
               <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
             </select>
           </div>
@@ -143,25 +146,100 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
             <input id="students-f15" [(ngModel)]="form.parentPassword" autocomplete="new-password" placeholder="e.g. mango river lantern" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
           </div>
 
+          <!-- Fee & Transportation Details -->
           <div class="md:col-span-2 border-t border-neutral-200 pt-4">
-            <p class="text-sm font-medium text-neutral-900">Fees</p>
-            <p *ngIf="classFeesLoading()" class="text-xs text-neutral-500 mt-1">Checking this class's fee structure…</p>
-            <ng-container *ngIf="!classFeesLoading()">
-              <p *ngIf="classFees().length" class="text-sm text-neutral-700 mt-1">
-                {{ className(form.classId) }}, {{ academicYear }}:
-                <ng-container *ngFor="let f of classFees(); let last = last">{{ f.name }} {{ f.amount | currency:'INR':'symbol':'1.0-0' }}{{ last ? '' : ' · ' }}</ng-container>
-                — <span class="font-semibold">{{ classFeesTotal() | currency:'INR':'symbol':'1.0-0' }}</span> will be set as pending at admission.
-              </p>
-              <p *ngIf="!classFees().length" class="text-sm text-warning-700 bg-warning-50 border border-warning-200 rounded-lg px-3 py-2 mt-2">
-                No fee structure is set for {{ className(form.classId) }} for {{ academicYear }}, so the pending fee would start at ₹0.
-                <a routerLink="/fees" class="underline font-medium">Add it under Fees</a> first.
-              </p>
-            </ng-container>
+            <p class="text-sm font-medium text-neutral-900">Fee &amp; Transportation Details</p>
+            <p class="text-xs text-neutral-500">Fees come from the fee structure for {{ className(form.classId) }}. Admission opens the student's fee account with the fees below.</p>
           </div>
+          <div class="md:col-span-2">
+            <span class="block text-xs text-neutral-500 mb-2" id="transport-q">Does this student require transportation? *</span>
+            <div class="flex gap-3" role="radiogroup" aria-labelledby="transport-q">
+              <label class="flex items-center gap-2 px-4 py-2 border rounded-lg text-sm cursor-pointer"
+                [class]="form.needsTransport ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-neutral-300 text-neutral-700'">
+                <input type="radio" name="needsTransport" [value]="true" aria-label="Yes, needs transportation" [(ngModel)]="form.needsTransport" (ngModelChange)="onTransportChange()"> Yes
+              </label>
+              <label class="flex items-center gap-2 px-4 py-2 border rounded-lg text-sm cursor-pointer"
+                [class]="!form.needsTransport ? 'border-primary-600 bg-primary-50 text-primary-700' : 'border-neutral-300 text-neutral-700'">
+                <input type="radio" name="needsTransport" [value]="false" aria-label="No transportation" [(ngModel)]="form.needsTransport" (ngModelChange)="onTransportChange()"> No
+              </label>
+            </div>
+          </div>
+          <ng-container *ngIf="form.needsTransport">
+            <div>
+              <label class="block text-xs text-neutral-500 mb-1" for="students-route">Route *</label>
+              <select id="students-route" [(ngModel)]="form.routeId" (ngModelChange)="refreshPreview()" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm bg-white">
+                <option value="" disabled>Select a route</option>
+                <option *ngFor="let r of activeRoutes()" [value]="r.id">{{ r.name }} — {{ (r.monthlyFee ?? 0) | currency:'INR':'symbol':'1.0-0' }}/month</option>
+              </select>
+              <p *ngIf="!activeRoutes().length" class="text-xs text-warning-700 mt-1">No active routes. Add one under Fees → Fee structure → Transportation.</p>
+            </div>
+            <div>
+              <label class="block text-xs text-neutral-500 mb-1" for="students-pickup">Pickup point</label>
+              <input id="students-pickup" [(ngModel)]="form.pickupPoint" maxlength="200" placeholder="e.g. Gandhi Chowk" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            </div>
+          </ng-container>
           <div>
             <label class="block text-xs text-neutral-500 mb-1" for="students-f16">Previous dues (₹)</label>
-            <input id="students-f16" [(ngModel)]="form.previousDues" type="number" min="0" placeholder="0 if none" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
-            <p class="text-xs text-neutral-500 mt-1">Anything already owed, e.g. from an earlier school or year. Added on top of the class fees.</p>
+            <input id="students-f16" [(ngModel)]="form.previousDues" (ngModelChange)="refreshPreview()" type="number" min="0" placeholder="0 if none" class="w-full px-4 py-2.5 border border-neutral-300 rounded-lg text-sm">
+            <p class="text-xs text-neutral-500 mt-1">Anything already owed, e.g. from an earlier school or year.</p>
+          </div>
+
+          <!-- Live fee calculation -->
+          <div class="md:col-span-2 rounded-xl border border-neutral-200 bg-neutral-50 p-4" aria-live="polite">
+            <div class="flex items-center justify-between mb-3">
+              <p class="text-sm font-semibold text-neutral-900">Fee summary — {{ className(form.classId) }}{{ preview()?.academicYear ? ', ' + preview()!.academicYear : '' }}</p>
+              <span *ngIf="previewLoading()" class="text-xs text-neutral-500">Calculating…</span>
+            </div>
+            <p *ngIf="previewError()" class="text-sm text-error-600">{{ previewError() }}</p>
+            <ng-container *ngIf="preview() as p">
+              <table class="w-full text-sm">
+                <thead class="text-left text-xs text-neutral-500">
+                  <tr><th class="py-1.5 font-medium">Fee type</th><th class="py-1.5 font-medium">When</th><th class="py-1.5 font-medium text-right">Amount</th></tr>
+                </thead>
+                <tbody>
+                  <tr class="border-t border-neutral-200">
+                    <td class="py-1.5 text-neutral-900">Admission fee</td><td class="py-1.5 text-neutral-600">Once, at admission</td>
+                    <td class="py-1.5 text-right">{{ p.admissionFee ? (p.admissionFee | currency:'INR':'symbol':'1.0-0') : 'Not charged' }}</td>
+                  </tr>
+                  <tr class="border-t border-neutral-200">
+                    <td class="py-1.5 text-neutral-900">Monthly tuition fee</td><td class="py-1.5 text-neutral-600">Every month</td>
+                    <td class="py-1.5 text-right">{{ p.monthlyTuition | currency:'INR':'symbol':'1.0-0' }}</td>
+                  </tr>
+                  <tr *ngFor="let e of p.exams" class="border-t border-neutral-200" [class.text-neutral-400]="!e.charged">
+                    <td class="py-1.5" [class.text-neutral-900]="e.charged">{{ e.label }}</td>
+                    <td class="py-1.5 text-neutral-600">{{ e.charged ? 'Due ' + (e.dueDate | date:'d MMM yyyy') : 'Already held — not charged' }}</td>
+                    <td class="py-1.5 text-right">{{ e.amount | currency:'INR':'symbol':'1.0-0' }}</td>
+                  </tr>
+                  <tr class="border-t border-neutral-200">
+                    <td class="py-1.5 text-neutral-900">Transportation fee</td>
+                    <td class="py-1.5 text-neutral-600">{{ p.transport ? p.transport.routeName + ', every month' : (form.needsTransport ? 'Choose a route' : 'Not using transport') }}</td>
+                    <td class="py-1.5 text-right">{{ p.transport ? (p.transport.monthlyFee | currency:'INR':'symbol':'1.0-0') : '—' }}</td>
+                  </tr>
+                  <tr *ngIf="p.previousDues" class="border-t border-neutral-200">
+                    <td class="py-1.5 text-neutral-900">Previous dues</td><td class="py-1.5 text-neutral-600">At admission</td>
+                    <td class="py-1.5 text-right">{{ p.previousDues | currency:'INR':'symbol':'1.0-0' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+                <div class="rounded-lg bg-white border border-neutral-200 p-3">
+                  <p class="text-xs text-neutral-500">Payable at admission</p>
+                  <p class="text-lg font-bold text-neutral-900">{{ p.initialPending | currency:'INR':'symbol':'1.0-0' }}</p>
+                  <p class="text-[11px] text-neutral-500">{{ initialBreakdown(p) }}</p>
+                </div>
+                <div class="rounded-lg bg-white border border-neutral-200 p-3">
+                  <p class="text-xs text-neutral-500">Exam fees this session</p>
+                  <p class="text-lg font-bold text-neutral-900">{{ p.examTotal | currency:'INR':'symbol':'1.0-0' }}</p>
+                  <p class="text-[11px] text-neutral-500">Each due on its own date, not now</p>
+                </div>
+                <div class="rounded-lg bg-white border border-neutral-200 p-3">
+                  <p class="text-xs text-neutral-500">Every month after this</p>
+                  <p class="text-lg font-bold text-neutral-900">{{ p.monthlyTotal | currency:'INR':'symbol':'1.0-0' }}</p>
+                  <p class="text-[11px] text-neutral-500">Tuition{{ p.transport ? ' + transport' : '' }}, billed monthly</p>
+                </div>
+              </div>
+              <p *ngIf="p.warning" class="text-xs text-warning-700 bg-warning-50 border border-warning-200 rounded-lg px-3 py-2 mt-3">{{ p.warning }}</p>
+            </ng-container>
           </div>
         </div>
         <div class="mt-4 flex items-center gap-3">
@@ -214,9 +292,10 @@ import { THEMED_FIELDS } from '../../../../shared/forms';
     </div>
   `,
 })
-export class StudentsComponent implements OnInit {
+export class StudentsComponent implements OnInit, OnDestroy {
   private service = inject(StudentsService);
   private feesService = inject(FeesService);
+  private transport = inject(TransportService);
   private auth = inject(AuthService);
   private route = inject(ActivatedRoute);
 
@@ -233,11 +312,13 @@ export class StudentsComponent implements OnInit {
   keyword = '';
   roster: RosterStatus = 'current';
 
-  readonly academicYear = CURRENT_ACADEMIC_YEAR;
   readonly today = localIsoDate(new Date());
-  classFees = signal<Array<{ name: string; amount: number }>>([]);
-  classFeesLoading = signal(false);
-  classFeesTotal = () => this.classFees().reduce((sum, f) => sum + f.amount, 0);
+  preview = signal<FeeBreakdown | null>(null);
+  previewLoading = signal(false);
+  previewError = signal('');
+  activeRoutes = signal<TransportRoute[]>([]);
+  private previewTimer: ReturnType<typeof setTimeout> | null = null;
+  private previewSeq = 0;
   guardian = guardianOf;
   statusLabel = studentStatusLabel;
 
@@ -250,7 +331,7 @@ export class StudentsComponent implements OnInit {
     return { fullName: '', dateOfBirth: '', gender: 'Male', classId: DEFAULT_CLASS.id, sectionId: DEFAULT_SECTION.id,
       admissionNumber: '', address: '',
       fatherName: '', fatherPhone: '', fatherEmail: '', motherName: '', motherPhone: '', motherEmail: '',
-      parentUsername: '', parentPassword: '', previousDues: 0 };
+      parentUsername: '', parentPassword: '', previousDues: 0, needsTransport: false, routeId: '', pickupPoint: '' };
   }
 
   form: AdmitStudentForm = this.blankForm();
@@ -279,21 +360,50 @@ export class StudentsComponent implements OnInit {
     });
   }
 
-  /** Shows what the chosen class's fee structure will put on the new student's account. */
-  loadClassFees(): void {
-    this.classFeesLoading.set(true);
-    this.feesService.listStructures(this.form.classId, this.academicYear).subscribe({
-      next: (list: FeeStructure[]) => {
-        this.classFees.set((list ?? []).map((f) => ({ name: f.name ?? 'Fee', amount: Number(f.amount ?? 0) })));
-        this.classFeesLoading.set(false);
+  ngOnDestroy(): void { if (this.previewTimer) clearTimeout(this.previewTimer); }
+
+  /** Recalculates the fee summary for the chosen class, route and previous dues (debounced). */
+  refreshPreview(): void {
+    this.formError.set(''); // a stale "choose a route" etc. shouldn't outlive the change that fixed it
+    if (this.previewTimer) clearTimeout(this.previewTimer);
+    this.previewTimer = setTimeout(() => this.loadPreview(), 250);
+  }
+
+  private loadPreview(): void {
+    const seq = ++this.previewSeq;
+    const routeId = this.form.needsTransport ? this.form.routeId || null : null;
+    this.previewLoading.set(true); this.previewError.set('');
+    this.feesService.preview(this.form.classId, routeId, Number(this.form.previousDues) || null).subscribe({
+      next: (p) => { if (seq !== this.previewSeq) return; this.preview.set(p); this.previewLoading.set(false); },
+      error: (err) => {
+        if (seq !== this.previewSeq) return;
+        this.preview.set(null); this.previewLoading.set(false);
+        this.previewError.set(this.msg(err, "Couldn't work out the fees for this class."));
       },
-      error: () => { this.classFees.set([]); this.classFeesLoading.set(false); },
+    });
+  }
+
+  onTransportChange(): void {
+    if (!this.form.needsTransport) { this.form.routeId = ''; this.form.pickupPoint = ''; }
+    this.refreshPreview();
+  }
+
+  /** "Admission ₹2,000 + November ₹600 + transport ₹700" for the payable-now box. */
+  initialBreakdown(p: FeeBreakdown): string {
+    const parts = p.lines.filter((l) => l.dueNow).map((l) => `${feeCategoryLabel(l.category)} ₹${Math.round(l.amount).toLocaleString('en-IN')}`);
+    return parts.length ? parts.join(' + ') : 'Nothing due now';
+  }
+
+  private loadRoutes(): void {
+    this.transport.listRoutes().subscribe({
+      next: (list) => this.activeRoutes.set((list ?? []).filter((r) => r.isActive !== false)),
+      error: () => this.activeRoutes.set([]),
     });
   }
 
   toggleForm(): void {
     this.showForm.set(!this.showForm());
-    if (this.showForm()) this.loadClassFees();
+    if (this.showForm()) { this.loadRoutes(); this.refreshPreview(); }
   }
 
   admit(): void {
@@ -313,6 +423,10 @@ export class StudentsComponent implements OnInit {
       this.formError.set(`${badPhone[1]} mobile number must be 10 digits.`);
       return;
     }
+    if (f.needsTransport && !f.routeId) {
+      this.formError.set('Choose the transport route, or answer "No" to transportation.');
+      return;
+    }
     if ((f.parentPassword ?? '').length < 10) {
       this.formError.set('The parent login needs a password of at least 10 characters.');
       return;
@@ -325,6 +439,7 @@ export class StudentsComponent implements OnInit {
         this.showForm.set(false);
         this.lastAdmission.set(res);
         this.form = this.blankForm();
+        this.preview.set(null);
         this.load();
       },
       error: (err) => {
